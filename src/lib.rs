@@ -12,7 +12,7 @@ use std::path::PathBuf;
 impl GeoFile {
 	pub fn js_open(mut cx: FunctionContext) -> JsResult<JsBox<GeoFile>> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
-		let in_memory = cx.argument::<JsBoolean>(0)?.value(&mut cx);
+		let in_memory = cx.argument::<JsBoolean>(0).unwrap_or(cx.boolean(false)).value(&mut cx);
 
 		let geo_file = GeoFile::open(&filename, in_memory);
 		return Ok(cx.boxed(geo_file));
@@ -35,7 +35,7 @@ impl GeoFile {
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-	cx.export_function("GeofileOpen", GeoFile::js_open)?;
-	cx.export_function("GeofileFind", GeoFile::js_find)?;
+	cx.export_function("geofileOpen", GeoFile::js_open)?;
+	cx.export_function("geofileFind", GeoFile::js_find)?;
 	Ok(())
 }

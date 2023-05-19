@@ -95,14 +95,14 @@ impl GeoIndex {
 	fn create(filename_index: &PathBuf, geo_data: &dyn GeoDataTrait) -> Self {
 		let mut entries = geo_data.get_entries();
 		let mut index = GeoIndex { nodes: Vec::new() };
-		index.create_tree(0, entries.as_mut_slice());
+		index.create_tree(entries.as_mut_slice());
 		return index;
 	}
 	fn load(filename_index: &PathBuf) -> Self {
 		todo!()
 	}
 	fn save(filename_index: &PathBuf) {}
-	fn create_tree(&mut self, parent: usize, entries: &mut [GeoEntry]) -> usize {
+	fn create_tree(&mut self, entries: &mut [GeoEntry]) -> usize {
 		if entries.len() == 1 {
 			let entry = &entries[0];
 			let index = self.nodes.len();
@@ -111,7 +111,6 @@ impl GeoIndex {
 				is_leaf: true,
 				value1: entry.range.start,
 				value2: entry.range.end,
-				parent,
 			});
 			return index;
 		} else {
@@ -141,10 +140,9 @@ impl GeoIndex {
 				is_leaf: false,
 				value1: 0,
 				value2: 0,
-				parent,
 			});
-			let value1 = self.create_tree(index, part1);
-			let value2 = self.create_tree(index, part2);
+			let value1 = self.create_tree(part1);
+			let value2 = self.create_tree(part2);
 			let mut node = self.nodes.get_mut(index).unwrap();
 			node.value1 = value1;
 			node.value2 = value2;
@@ -176,7 +174,6 @@ struct GeoNode {
 	is_leaf: bool,
 	value1: usize,
 	value2: usize,
-	parent: usize,
 }
 
 #[derive(Clone)]

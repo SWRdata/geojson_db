@@ -1,5 +1,7 @@
-target
-index.node
-**/node_modules
+
 **/.DS_Store
+**/node_modules
+data/
+target/
+index.node
 npm-debug.log*
