@@ -1,0 +1,20 @@
+[package]
+name = "geojson_db"
+version = "0.1.0"
+authors = ["Michael Kreil <github@michael-kreil.de> (https://github.com/MichaelKreil)"]
+license = "MIT"
+edition = "2018"
+exclude = ["index.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4.0"
+
+[dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6"]
