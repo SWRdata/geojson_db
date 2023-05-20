@@ -12,9 +12,5 @@ crate-type = ["cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lazy_static = "1.4.0"
-
-[dependencies.neon]
-version = "0.10"
-default-features = false
-features = ["napi-6"]
+neon = { version = "0.10", default-features = false, features = ["napi-6"] }
+geojson = { version = "0.24.1", default-features = false, features = [] }

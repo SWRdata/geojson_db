@@ -1,10 +1,10 @@
 "use strict";
 
-const { geofileOpen, geofileFind } = require("./index.node");
+import { geofileOpen, geofileFind } from './index.node';
 
 class Geofile {
-	constructor(filename) {
-		this.me = geofileOpen(filename);
+	constructor(filename, memory_size = 64*1024*1024) {
+		this.me = geofileOpen(filename, memory_size);
 	}
 
 	find(bbox) {
