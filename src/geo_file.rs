@@ -148,7 +148,7 @@ impl GeoIndex {
 			});
 			let value1 = self.create_tree(part1);
 			let value2 = self.create_tree(part2);
-			let mut node = self.nodes.get_mut(index).unwrap();
+			let node = self.nodes.get_mut(index).unwrap();
 			node.value1 = value1;
 			node.value2 = value2;
 			index
