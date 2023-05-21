@@ -1,0 +1,55 @@
+---
+name: Continuous Integration
+
+on:
+  push:
+  schedule:
+    - cron: "0 0 13 * *"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: update rust
+        run: rustup update stable && rustup default stable
+      - name: add components
+        run: rustup component add rustfmt clippy
+      - name: cargo fmt
+        run: cargo fmt -- --check
+      - name: cargo clippy
+        run: cargo clippy -- -D warnings
+      - name: cargo check
+        run: cargo check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: update rust
+        run: rustup update stable && rustup default stable
+      - name: cargo test
+        run: cargo test
+
+  codecov:
+    name: code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: update rust
+        run: rustup update stable && rustup default stable
+      - name: get cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: cargo llvm-cov
+        run: cargo llvm-cov test --workspace --tests --lcov --output-path ./lcov.info
+      - name: upload to codecov
+        uses: codecov/codecov-action@v3
