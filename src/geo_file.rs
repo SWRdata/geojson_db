@@ -21,7 +21,7 @@ impl GeoFile {
 		let mut filename_index = filename.clone();
 		filename_index.set_extension("index");
 
-		let mut data = GeoDataFile::load(&filename, memory_size);
+		let mut data = GeoDataFile::load(filename, memory_size);
 
 		let index = if filename_index.exists() {
 			GeoIndex::load(&filename_index)?
@@ -29,17 +29,17 @@ impl GeoFile {
 			GeoIndex::create(&filename_index, &mut data)?
 		};
 
-		return Ok(GeoFile { data, index });
+		Ok(GeoFile { data, index })
 	}
 
 	pub fn find(&mut self, bbox: &GeoBBox) -> Result<String, Box<dyn Error>> {
 		let data = &mut self.data;
-		let leaves = self.index.collect_leaves(&bbox);
+		let leaves = self.index.collect_leaves(bbox);
 		let leaves: Vec<String> = leaves
 			.iter()
 			.map(|node| data.read_range(node.value1, node.value2).unwrap())
 			.collect();
-		return Ok("[".to_string() + &leaves.join(",") + "]");
+		Ok("[".to_string() + &leaves.join(",") + "]")
 	}
 }
 
@@ -52,14 +52,14 @@ impl GeoDataFile {
 	fn load(filename: &PathBuf, memory_size: usize) -> Self {
 		let file = File::open(filename).unwrap();
 		let reader = BufReader::with_capacity(memory_size, file);
-		return Self { reader };
+		Self { reader }
 	}
 
 	fn read_range(&mut self, start: usize, length: usize) -> Result<String, Box<dyn Error>> {
 		self.reader.seek(SeekFrom::Start(start as u64))?;
 		let mut buffer = vec![0; length];
 		self.reader.read_exact(&mut buffer)?;
-		return Ok(String::from_utf8(buffer)?);
+		Ok(String::from_utf8(buffer)?)
 	}
 
 	fn get_entries(&mut self) -> Result<Vec<GeoEntry>, Box<dyn Error>> {
@@ -82,7 +82,7 @@ impl GeoDataFile {
 			current_pos = end_pos;
 			line.clear();
 		}
-		return Ok(entries);
+		Ok(entries)
 	}
 }
 
@@ -96,7 +96,7 @@ impl GeoIndex {
 		let mut index = GeoIndex { nodes: Vec::new() };
 		index.create_tree(entries.as_mut_slice());
 		index.save(filename_index)?;
-		return Ok(index);
+		Ok(index)
 	}
 	fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let bytes = fs::read(filename_index)?;
@@ -104,7 +104,7 @@ impl GeoIndex {
 		Ok(index)
 	}
 	fn save(&self, filename_index: &PathBuf) -> Result<(), Box<dyn Error>> {
-		fs::write(filename_index, &bincode::serialize(self)?)?;
+		fs::write(filename_index, bincode::serialize(self)?)?;
 		Ok(())
 	}
 	fn create_tree(&mut self, entries: &mut [GeoEntry]) -> usize {
@@ -117,7 +117,7 @@ impl GeoIndex {
 				value1: entry.start,
 				value2: entry.length,
 			});
-			return index;
+			index
 		} else {
 			let mut bbox = GeoBBox::new_empty();
 			for entry in entries.iter() {
@@ -151,7 +151,7 @@ impl GeoIndex {
 			let mut node = self.nodes.get_mut(index).unwrap();
 			node.value1 = value1;
 			node.value2 = value2;
-			return index;
+			index
 		}
 	}
 	fn collect_leaves(&self, bbox: &GeoBBox) -> Vec<&GeoNode> {
@@ -207,7 +207,7 @@ impl GeoBBox {
 			y_max: f64::MIN,
 		}
 	}
-	fn from_vec(v1: &Vec<f64>) -> Self {
+	fn from_vec(v1: &[f64]) -> Self {
 		GeoBBox {
 			x_min: v1[0],
 			x_max: v1[0],
@@ -215,29 +215,29 @@ impl GeoBBox {
 			y_max: v1[1],
 		}
 	}
-	fn from_vec2(v2: &Vec<Vec<f64>>) -> Self {
+	fn from_vec2(v2: &[Vec<f64>]) -> Self {
 		let mut bbox = GeoBBox::new_empty();
 		v2.iter().for_each(|v1| bbox.include_point(v1[0], v1[1]));
-		return bbox;
+		bbox
 	}
-	fn from_vec3(v3: &Vec<Vec<Vec<f64>>>) -> Self {
+	fn from_vec3(v3: &[Vec<Vec<f64>>]) -> Self {
 		let mut bbox = GeoBBox::new_empty();
 		v3.iter().for_each(|v2| bbox.include_bbox(&GeoBBox::from_vec2(v2)));
-		return bbox;
+		bbox
 	}
-	fn from_vec4(v4: &Vec<Vec<Vec<Vec<f64>>>>) -> Self {
+	fn from_vec4(v4: &[Vec<Vec<Vec<f64>>>]) -> Self {
 		let mut bbox = GeoBBox::new_empty();
 		v4.iter().for_each(|v3| bbox.include_bbox(&GeoBBox::from_vec3(v3)));
-		return bbox;
+		bbox
 	}
 	fn from_geometry(geometry: &geojson::Geometry) -> Self {
 		match &geometry.value {
-			geojson::Value::Point(c) => Self::from_vec(&c),
-			geojson::Value::MultiPoint(c) => Self::from_vec2(&c),
-			geojson::Value::LineString(c) => Self::from_vec2(&c),
-			geojson::Value::MultiLineString(c) => Self::from_vec3(&c),
-			geojson::Value::Polygon(c) => Self::from_vec3(&c),
-			geojson::Value::MultiPolygon(c) => Self::from_vec4(&c),
+			geojson::Value::Point(c) => Self::from_vec(c),
+			geojson::Value::MultiPoint(c) => Self::from_vec2(c),
+			geojson::Value::LineString(c) => Self::from_vec2(c),
+			geojson::Value::MultiLineString(c) => Self::from_vec3(c),
+			geojson::Value::Polygon(c) => Self::from_vec3(c),
+			geojson::Value::MultiPolygon(c) => Self::from_vec4(c),
 			geojson::Value::GeometryCollection(c) => {
 				let mut bbox = GeoBBox::new_empty();
 				c.iter()
@@ -290,7 +290,7 @@ impl GeoBBox {
 		if self.y_max < bbox.y_min {
 			return false;
 		}
-		return true;
+		true
 	}
 }
 
