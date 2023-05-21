@@ -1,15 +1,16 @@
 "use strict";
 
-import { geofileOpen, geofileFind } from './index.node';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { geofileOpen, geofileFind } = require('./index.node');
 
-class Geofile {
-	constructor(filename, memory_size = 64*1024*1024) {
+export default class Geofile {
+	constructor(filename, memory_size = 64 * 1024 * 1024) {
 		this.me = geofileOpen(filename, memory_size);
 	}
 
 	find(bbox) {
-		return geofileFind.call(this.me);
+		if ((!Array.isArray(bbox)) || (bbox.length !== 4)) throw Error('argument "bbox" must be an Array of 4 numbers')
+		return geofileFind.call(this.me, bbox);
 	}
 }
-
-module.exports = Geofile;

@@ -5,3 +5,4 @@ data/
 target/
 index.node
 npm-debug.log*
+helpers/release.sh

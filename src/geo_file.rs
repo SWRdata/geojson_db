@@ -76,7 +76,7 @@ impl GeoDataFile {
 			entries.push(GeoEntry {
 				bbox: GeoBBox::from_geometry(&feature.geometry.unwrap()),
 				start: current_pos,
-				length: end_pos - current_pos,
+				length: end_pos - current_pos - 1,
 			});
 
 			current_pos = end_pos;

@@ -9,8 +9,10 @@ use neon::{
 };
 use std::{cell::RefCell, path::PathBuf};
 
+type BoxedGeoFile = JsBox<RefCell<GeoFile>>;
+
 impl GeoFile {
-	pub fn js_open(mut cx: FunctionContext) -> JsResult<JsBox<GeoFile>> {
+	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoFile> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
 		let memory_size = cx
 			.argument::<JsNumber>(1)
@@ -18,10 +20,10 @@ impl GeoFile {
 			.value(&mut cx);
 
 		let geo_file = GeoFile::open(&filename, memory_size as usize).unwrap();
-		return Ok(cx.boxed(geo_file));
+		return Ok(cx.boxed(RefCell::new(geo_file)));
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsString> {
-		let geo_file = cx.this().downcast_or_throw::<JsBox<RefCell<GeoFile>>, _>(&mut cx)?;
+		let geo_file = cx.this().downcast_or_throw::<BoxedGeoFile, _>(&mut cx)?;
 
 		let bbox = cx.argument::<JsArray>(0)?.to_vec(&mut cx)?;
 		let bbox: Vec<f64> = bbox
