@@ -13,7 +13,7 @@ export default class Geofile {
 	* find(bbox) {
 		if ((!Array.isArray(bbox)) || (bbox.length !== 4)) throw Error('argument "bbox" must be an Array of 4 numbers');
 		let index = 0;
-		const maxCount = 1000;
+		const maxCount = 100000;
 
 		do {
 			let result = geofileFind.call(this.#me, bbox, index, maxCount);

@@ -1,13 +1,14 @@
 use geojson::Feature;
+use memmap2::Mmap;
 use neon::types::Finalize;
 use serde::{Deserialize, Serialize};
 use std::{
 	error::Error,
 	fs::{self, File},
-	io::{BufRead, BufReader, Read, Seek, SeekFrom},
 	path::PathBuf,
 	result::Result,
-	str::FromStr,
+	str::{from_utf8, FromStr},
+	time::Instant,
 };
 
 pub struct GeoFile {
@@ -21,7 +22,7 @@ impl GeoFile {
 		let mut filename_index = filename.clone();
 		filename_index.set_extension("index");
 
-		let mut data = GeoDataFile::load(filename, memory_size);
+		let mut data = GeoDataFile::load(filename)?;
 
 		let index = if filename_index.exists() {
 			GeoIndex::load(&filename_index)?
@@ -36,11 +37,18 @@ impl GeoFile {
 		&mut self, bbox: &GeoBBox, start_index: usize, max_count: usize,
 	) -> Result<(Vec<String>, usize), Box<dyn Error>> {
 		let data = &mut self.data;
+
+		let start = Instant::now();
 		let (entries, next_index) = self.index.collect_leaves(bbox, start_index, max_count);
+		println!("A {:?}", start.elapsed());
+
+		let start = Instant::now();
 		let entries: Vec<String> = entries
 			.iter()
 			.map(|node| data.read_range(node.value1, node.value2).unwrap())
 			.collect();
+
+		println!("B {:?}", start.elapsed());
 		Ok((entries, next_index))
 	}
 }
@@ -48,42 +56,38 @@ impl GeoFile {
 impl Finalize for GeoFile {}
 
 struct GeoDataFile {
-	reader: BufReader<File>,
+	mmap: Mmap,
 }
 impl GeoDataFile {
-	fn load(filename: &PathBuf, memory_size: usize) -> Self {
+	fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let file = File::open(filename).unwrap();
-		let reader = BufReader::with_capacity(memory_size, file);
-		Self { reader }
+		let mmap = unsafe { memmap2::Mmap::map(&file)? };
+		Ok(Self { mmap })
 	}
 
 	fn read_range(&mut self, start: usize, length: usize) -> Result<String, Box<dyn Error>> {
-		self.reader.seek(SeekFrom::Start(start as u64))?;
-		let mut buffer = vec![0; length];
-		self.reader.read_exact(&mut buffer)?;
-		Ok(String::from_utf8(buffer)?)
+		let bytes = &self.mmap[start..start + length];
+		Ok(from_utf8(bytes)?.to_string())
 	}
 
 	fn get_entries(&mut self) -> Result<Vec<GeoEntry>, Box<dyn Error>> {
-		self.reader.seek(SeekFrom::Start(0))?;
+		let content = from_utf8(&self.mmap)?;
 
 		let mut current_pos = 0;
-		let mut line = String::new();
-
 		let mut entries: Vec<GeoEntry> = Vec::new();
-		while self.reader.read_line(&mut line)? > 0 {
-			let end_pos = self.reader.stream_position()? as usize;
+		for line in content.lines() {
+			let end_pos = current_pos + line.len();
 
-			let feature = Feature::from_str(&line)?;
+			let feature = Feature::from_str(line)?;
 			entries.push(GeoEntry {
 				bbox: GeoBBox::from_geometry(&feature.geometry.unwrap()),
 				start: current_pos,
-				length: end_pos - current_pos - 1,
+				length: end_pos - current_pos,
 			});
 
-			current_pos = end_pos;
-			line.clear();
+			current_pos = end_pos + 1; // +1 for the newline character
 		}
+
 		Ok(entries)
 	}
 }
