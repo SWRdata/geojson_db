@@ -32,14 +32,16 @@ impl GeoFile {
 		Ok(GeoFile { data, index })
 	}
 
-	pub fn find(&mut self, bbox: &GeoBBox) -> Result<String, Box<dyn Error>> {
+	pub fn find(
+		&mut self, bbox: &GeoBBox, start_index: usize, max_count: usize,
+	) -> Result<(Vec<String>, usize), Box<dyn Error>> {
 		let data = &mut self.data;
-		let leaves = self.index.collect_leaves(bbox);
-		let leaves: Vec<String> = leaves
+		let (entries, next_index) = self.index.collect_leaves(bbox, start_index, max_count);
+		let entries: Vec<String> = entries
 			.iter()
 			.map(|node| data.read_range(node.value1, node.value2).unwrap())
 			.collect();
-		Ok("[".to_string() + &leaves.join(",") + "]")
+		Ok((entries, next_index))
 	}
 }
 
@@ -107,70 +109,93 @@ impl GeoIndex {
 		fs::write(filename_index, bincode::serialize(self)?)?;
 		Ok(())
 	}
-	fn create_tree(&mut self, entries: &mut [GeoEntry]) -> usize {
-		if entries.len() == 1 {
-			let entry = &entries[0];
-			let index = self.nodes.len();
-			self.nodes.push(GeoNode {
-				bbox: entry.bbox.clone(),
-				is_leaf: true,
-				value1: entry.start,
-				value2: entry.length,
-			});
-			index
-		} else {
-			let mut bbox = GeoBBox::new_empty();
-			for entry in entries.iter() {
-				bbox.include_bbox(&entry.bbox);
+	fn create_tree(&mut self, entries: &mut [GeoEntry]) {
+		create_tree_rec(entries, &mut self.nodes);
+		for i in 0..self.nodes.len() {
+			if self.nodes[i].is_leaf {
+				continue;
 			}
-			if bbox.is_horizontal() {
-				// sort by x
-				entries.sort_unstable_by(|a, b| {
-					(a.bbox.x_min + a.bbox.x_max)
-						.partial_cmp(&(b.bbox.x_min + b.bbox.x_max))
-						.unwrap()
-				})
+			let GeoNode {
+				value1, value2, next, ..
+			} = self.nodes[i];
+			self.nodes[value1].next = value2;
+			self.nodes[value2].next = next;
+		}
+
+		fn create_tree_rec(entries: &mut [GeoEntry], nodes: &mut Vec<GeoNode>) -> usize {
+			if entries.len() == 1 {
+				let entry = &entries[0];
+				let index = nodes.len();
+				nodes.push(GeoNode {
+					bbox: entry.bbox.clone(),
+					is_leaf: true,
+					value1: entry.start,
+					value2: entry.length,
+					next: 0,
+				});
+				index
 			} else {
-				// sort by y
-				entries.sort_unstable_by(|a, b| {
-					(a.bbox.y_min + a.bbox.y_max)
-						.partial_cmp(&(b.bbox.y_min + b.bbox.y_max))
-						.unwrap()
-				})
+				let mut bbox = GeoBBox::new_empty();
+				for entry in entries.iter() {
+					bbox.include_bbox(&entry.bbox);
+				}
+				if bbox.is_horizontal() {
+					// sort by x
+					entries.sort_unstable_by(|a, b| {
+						(a.bbox.x_min + a.bbox.x_max)
+							.partial_cmp(&(b.bbox.x_min + b.bbox.x_max))
+							.unwrap()
+					})
+				} else {
+					// sort by y
+					entries.sort_unstable_by(|a, b| {
+						(a.bbox.y_min + a.bbox.y_max)
+							.partial_cmp(&(b.bbox.y_min + b.bbox.y_max))
+							.unwrap()
+					})
+				}
+				let (part1, part2) = entries.split_at_mut(entries.len() / 2);
+				let index = nodes.len();
+				nodes.push(GeoNode {
+					bbox,
+					is_leaf: false,
+					value1: 0,
+					value2: 0,
+					next: 0,
+				});
+				let value1 = create_tree_rec(part1, nodes);
+				let value2 = create_tree_rec(part2, nodes);
+				let mut node = nodes.get_mut(index).unwrap();
+				node.value1 = value1;
+				node.value2 = value2;
+				index
 			}
-			let (part1, part2) = entries.split_at_mut(entries.len() / 2);
-			let index = self.nodes.len();
-			self.nodes.push(GeoNode {
-				bbox,
-				is_leaf: false,
-				value1: 0,
-				value2: 0,
-			});
-			let value1 = self.create_tree(part1);
-			let value2 = self.create_tree(part2);
-			let node = self.nodes.get_mut(index).unwrap();
-			node.value1 = value1;
-			node.value2 = value2;
-			index
 		}
 	}
-	fn collect_leaves(&self, bbox: &GeoBBox) -> Vec<&GeoNode> {
-		let mut leaves: Vec<&GeoNode> = Vec::new();
-		collect_leaves_rec(&self.nodes, &self.nodes[0], bbox, &mut leaves);
-		return leaves;
+	fn collect_leaves(&self, bbox: &GeoBBox, start_index: usize, max_count: usize) -> (Vec<&GeoNode>, usize) {
+		let mut leaves: Vec<&GeoNode> = Vec::with_capacity(max_count);
+		let mut index = start_index;
 
-		fn collect_leaves_rec<'a>(
-			nodes: &'a Vec<GeoNode>, node: &'a GeoNode, bbox: &GeoBBox, results: &mut Vec<&'a GeoNode>,
-		) {
+		loop {
+			let node = &self.nodes[index];
 			if node.bbox.overlap_bbox(bbox) {
 				if node.is_leaf {
-					results.push(node);
+					leaves.push(&node);
+					index = node.next;
+					if leaves.len() >= max_count {
+						break;
+					}
 				} else {
-					collect_leaves_rec(nodes, &nodes[node.value1], bbox, results);
-					collect_leaves_rec(nodes, &nodes[node.value2], bbox, results);
+					index = node.value1;
 				}
+			} else {
+				index = node.next;
+			}
+			if index == 0 {
+				break;
 			}
 		}
+		(leaves, index)
 	}
 }
 
@@ -178,8 +203,14 @@ impl GeoIndex {
 struct GeoNode {
 	bbox: GeoBBox,
 	is_leaf: bool,
+	// NODE: index to left child
+	// LEAF: offset in file
 	value1: usize,
+	// NODE: index to right child
+	// LEAF: length in file
 	value2: usize,
+	// index to next sibling
+	next: usize,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
