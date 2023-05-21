@@ -1,9 +1,12 @@
 use geojson::Feature;
 use neon::types::Finalize;
+use serde::{Deserialize, Serialize};
 use std::{
-	fs::File,
+	error::Error,
+	fs::{self, File},
 	io::{BufRead, BufReader, Read, Seek, SeekFrom},
 	path::PathBuf,
+	result::Result,
 	str::FromStr,
 };
 
@@ -14,29 +17,29 @@ pub struct GeoFile {
 unsafe impl Send for GeoFile {}
 
 impl GeoFile {
-	pub fn open(filename: &PathBuf, memory_size: usize) -> Self {
+	pub fn open(filename: &PathBuf, memory_size: usize) -> Result<Self, Box<dyn Error>> {
 		let mut filename_index = filename.clone();
 		filename_index.set_extension("index");
 
 		let mut data = GeoDataFile::load(&filename, memory_size);
 
 		let index = if filename_index.exists() {
-			GeoIndex::load(&filename_index)
+			GeoIndex::load(&filename_index)?
 		} else {
-			GeoIndex::create(&filename_index, &mut data)
+			GeoIndex::create(&filename_index, &mut data)?
 		};
 
-		return GeoFile { data, index };
+		return Ok(GeoFile { data, index });
 	}
 
-	pub fn find(&mut self, bbox: &GeoBBox) -> String {
+	pub fn find(&mut self, bbox: &GeoBBox) -> Result<String, Box<dyn Error>> {
 		let data = &mut self.data;
 		let leaves = self.index.collect_leaves(&bbox);
 		let leaves: Vec<String> = leaves
 			.iter()
-			.map(|node| data.read_range(node.value1, node.value2))
+			.map(|node| data.read_range(node.value1, node.value2).unwrap())
 			.collect();
-		return "[".to_string() + &leaves.join(",") + "]";
+		return Ok("[".to_string() + &leaves.join(",") + "]");
 	}
 }
 
@@ -52,24 +55,24 @@ impl GeoDataFile {
 		return Self { reader };
 	}
 
-	fn read_range(&mut self, start: usize, length: usize) -> String {
-		self.reader.seek(SeekFrom::Start(start as u64)).unwrap();
+	fn read_range(&mut self, start: usize, length: usize) -> Result<String, Box<dyn Error>> {
+		self.reader.seek(SeekFrom::Start(start as u64))?;
 		let mut buffer = vec![0; length];
-		self.reader.read_exact(&mut buffer).unwrap();
-		return String::from_utf8(buffer).unwrap();
+		self.reader.read_exact(&mut buffer)?;
+		return Ok(String::from_utf8(buffer)?);
 	}
 
-	fn get_entries(&mut self) -> Vec<GeoEntry> {
-		self.reader.seek(SeekFrom::Start(0)).unwrap();
+	fn get_entries(&mut self) -> Result<Vec<GeoEntry>, Box<dyn Error>> {
+		self.reader.seek(SeekFrom::Start(0))?;
 
 		let mut current_pos = 0;
 		let mut line = String::new();
 
 		let mut entries: Vec<GeoEntry> = Vec::new();
-		while self.reader.read_line(&mut line).unwrap() > 0 {
-			let end_pos = self.reader.stream_position().unwrap() as usize;
+		while self.reader.read_line(&mut line)? > 0 {
+			let end_pos = self.reader.stream_position()? as usize;
 
-			let feature = Feature::from_str(&line).unwrap();
+			let feature = Feature::from_str(&line)?;
 			entries.push(GeoEntry {
 				bbox: GeoBBox::from_geometry(&feature.geometry.unwrap()),
 				start: current_pos,
@@ -79,26 +82,30 @@ impl GeoDataFile {
 			current_pos = end_pos;
 			line.clear();
 		}
-		return entries;
+		return Ok(entries);
 	}
 }
 
+#[derive(Serialize, Deserialize)]
 struct GeoIndex {
 	nodes: Vec<GeoNode>,
 }
 impl GeoIndex {
-	fn create(filename_index: &PathBuf, geo_data: &mut GeoDataFile) -> Self {
-		let mut entries = geo_data.get_entries();
+	fn create(filename_index: &PathBuf, geo_data: &mut GeoDataFile) -> Result<Self, Box<dyn Error>> {
+		let mut entries = geo_data.get_entries()?;
 		let mut index = GeoIndex { nodes: Vec::new() };
 		index.create_tree(entries.as_mut_slice());
-		index.save(filename_index);
-		return index;
+		index.save(filename_index)?;
+		return Ok(index);
 	}
-	fn load(filename_index: &PathBuf) -> Self {
-		todo!()
+	fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
+		let bytes = fs::read(filename_index)?;
+		let index = bincode::deserialize(&bytes)?;
+		Ok(index)
 	}
-	fn save(&self, filename_index: &PathBuf) {
-		todo!()
+	fn save(&self, filename_index: &PathBuf) -> Result<(), Box<dyn Error>> {
+		fs::write(filename_index, &bincode::serialize(self)?)?;
+		Ok(())
 	}
 	fn create_tree(&mut self, entries: &mut [GeoEntry]) -> usize {
 		if entries.len() == 1 {
@@ -167,6 +174,7 @@ impl GeoIndex {
 	}
 }
 
+#[derive(Serialize, Deserialize)]
 struct GeoNode {
 	bbox: GeoBBox,
 	is_leaf: bool,
@@ -174,7 +182,7 @@ struct GeoNode {
 	value2: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GeoBBox {
 	x_min: f64,
 	x_max: f64,

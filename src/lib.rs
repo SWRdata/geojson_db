@@ -17,7 +17,7 @@ impl GeoFile {
 			.unwrap_or(cx.number(64 * 1204 * 1024))
 			.value(&mut cx);
 
-		let geo_file = GeoFile::open(&filename, memory_size as usize);
+		let geo_file = GeoFile::open(&filename, memory_size as usize).unwrap();
 		return Ok(cx.boxed(geo_file));
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsString> {
@@ -31,7 +31,7 @@ impl GeoFile {
 
 		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
-		let json = geo_file.borrow_mut().find(&bbox);
+		let json = geo_file.borrow_mut().find(&bbox).unwrap();
 		return Ok(cx.string(json));
 	}
 }
