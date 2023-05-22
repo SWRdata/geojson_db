@@ -1,6 +1,6 @@
-mod geo_file;
+mod geo;
 
-use geo_file::*;
+use geo::{GeoBBox, GeoDB};
 use neon::{
 	context::Context,
 	prelude::{FunctionContext, ModuleContext, Object},
@@ -9,9 +9,9 @@ use neon::{
 };
 use std::{cell::RefCell, path::PathBuf};
 
-type BoxedGeoFile = JsBox<RefCell<GeoFile>>;
+type BoxedGeoFile = JsBox<RefCell<GeoDB>>;
 
-impl GeoFile {
+impl GeoDB {
 	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoFile> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
 		let memory_size = cx
@@ -19,7 +19,7 @@ impl GeoFile {
 			.unwrap_or(cx.number(64 * 1204 * 1024))
 			.value(&mut cx);
 
-		let geo_file = GeoFile::open(&filename, memory_size as usize).unwrap();
+		let geo_file = GeoDB::open(&filename, memory_size as usize).unwrap();
 		return Ok(cx.boxed(RefCell::new(geo_file)));
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsArray> {
@@ -51,7 +51,7 @@ impl GeoFile {
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
-	cx.export_function("geofileOpen", GeoFile::js_open)?;
-	cx.export_function("geofileFind", GeoFile::js_find)?;
+	cx.export_function("geofileOpen", GeoDB::js_open)?;
+	cx.export_function("geofileFind", GeoDB::js_find)?;
 	Ok(())
 }
