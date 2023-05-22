@@ -7,6 +7,7 @@ const { geofileOpen, geofileFind } = require('./index.node');
 export default class Geofile {
 	#me;
 	constructor(filename, memory_size = 64 * 1024 * 1024) {
+		console.log({ filename, memory_size });
 		this.#me = geofileOpen(filename, memory_size);
 	}
 

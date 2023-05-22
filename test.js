@@ -5,7 +5,7 @@ import Geofile from './index.js';
 console.log(Geofile);
 
 console.time('open');
-let file = new Geofile('./data/points.geojsonl')
+let file = new Geofile('./data/adresse.geojsonl')
 console.timeEnd('open');
 
 console.log(file);

@@ -9,7 +9,7 @@ pub struct GeoDB {
 unsafe impl Send for GeoDB {}
 
 impl GeoDB {
-	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
+	pub fn open(filename: &PathBuf, max_memory: usize) -> Result<Self, Box<dyn Error>> {
 		let mut filename_index = filename.clone();
 		filename_index.set_extension("idx");
 
@@ -17,13 +17,18 @@ impl GeoDB {
 		filename_table.set_extension("dat");
 
 		let index: GeoIndex = if filename_index.exists() && filename_table.exists() {
+			println!("load index");
 			GeoIndex::load(&filename_index)?
 		} else {
-			let data = &mut GeoFile::load(filename)?;
+			println!("load file temporary");
+			let data = &mut GeoFile::load(filename, max_memory)?;
+
+			println!("create index");
 			GeoIndex::create(data, &filename_index, &filename_table)?
 		};
 
-		let table: GeoFile = GeoFile::load(&filename_table)?;
+		println!("load file");
+		let table: GeoFile = GeoFile::load(&filename_table, max_memory)?;
 
 		Ok(GeoDB { index, table })
 	}

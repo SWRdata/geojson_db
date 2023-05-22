@@ -1,6 +1,6 @@
 use super::{GeoBBox, GeoNode};
 use geojson::Feature;
-use memmap2::Mmap;
+use memmap2::{Mmap, MmapOptions};
 use std::{
 	error::Error,
 	fs::File,
@@ -13,9 +13,9 @@ pub struct GeoFile {
 	mmap: Mmap,
 }
 impl GeoFile {
-	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
+	pub fn load(filename: &PathBuf, max_memory: usize) -> Result<Self, Box<dyn Error>> {
 		let file = File::open(filename).unwrap();
-		let mmap = unsafe { memmap2::Mmap::map(&file)? };
+		let mmap = unsafe { MmapOptions::new().len(max_memory).map(&file)? };
 		Ok(Self { mmap })
 	}
 

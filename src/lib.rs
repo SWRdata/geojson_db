@@ -18,13 +18,15 @@ type BoxedGeoDB = JsBox<RefCell<GeoDB>>;
 impl GeoDB {
 	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoDB> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
-		let _memory_size = cx
+		let memory_size = cx
 			.argument::<JsNumber>(1)
 			.unwrap_or(cx.number(64 * 1204 * 1024))
-			.value(&mut cx);
+			.value(&mut cx) as usize;
 
-		let geo_file = GeoDB::open(&filename).unwrap();
-		return Ok(cx.boxed(RefCell::new(geo_file)));
+		match GeoDB::open(&filename, memory_size) {
+			Ok(geo_file) => Ok(cx.boxed(RefCell::new(geo_file))),
+			Err(err) => cx.throw_error(err.to_string()),
+		}
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsArray> {
 		let geo_db = cx.this().downcast_or_throw::<BoxedGeoDB, _>(&mut cx)?;
