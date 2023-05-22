@@ -45,7 +45,7 @@ impl GeoFile {
 		let start = Instant::now();
 		let entries: Vec<String> = entries
 			.iter()
-			.map(|node| data.read_range(node.value1, node.value2).unwrap())
+			.map(|node| String::from_utf8(data.read_range(node.value1, node.value2).unwrap().to_vec()).unwrap())
 			.collect();
 
 		println!("B {:?}", start.elapsed());
@@ -65,9 +65,8 @@ impl GeoDataFile {
 		Ok(Self { mmap })
 	}
 
-	fn read_range(&mut self, start: usize, length: usize) -> Result<String, Box<dyn Error>> {
-		let bytes = &self.mmap[start..start + length];
-		Ok(from_utf8(bytes)?.to_string())
+	fn read_range(&mut self, start: usize, length: usize) -> Result<&[u8], Box<dyn Error>> {
+		Ok(&self.mmap[start..start + length])
 	}
 
 	fn get_entries(&mut self) -> Result<Vec<GeoEntry>, Box<dyn Error>> {
