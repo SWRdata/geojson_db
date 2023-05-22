@@ -6,6 +6,7 @@ console.log(Geofile);
 
 console.time('open');
 let file = new Geofile('./data/adresse.geojsonl')
+//let file = new Geofile('./data/points.geojsonl')
 console.timeEnd('open');
 
 console.log(file);

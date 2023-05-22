@@ -40,7 +40,7 @@ impl GeoIndex {
 				let buffer = geo_data.read_range(node.value1, node.value2)?;
 				node.value1 = file.stream_position()? as usize;
 				node.value2 = buffer.len();
-				file.write_all(buffer)?;
+				file.write_all(&buffer)?;
 			}
 		}
 		Ok(())
