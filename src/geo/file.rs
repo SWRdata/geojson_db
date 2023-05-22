@@ -23,6 +23,13 @@ impl GeoFile {
 		Ok(&self.mmap[start..start + length])
 	}
 
+	pub fn read_ranges(&self, leaves: Vec<&GeoNode>) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+		Ok(leaves
+			.iter()
+			.map(|l| self.mmap[l.value1..l.value1 + l.value2].to_vec())
+			.collect())
+	}
+
 	pub fn get_entries(&mut self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
 		let content = from_utf8(&self.mmap)?;
 

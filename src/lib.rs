@@ -5,9 +5,13 @@ use neon::{
 	context::Context,
 	prelude::{FunctionContext, ModuleContext, Object},
 	result::{JsResult, NeonResult},
-	types::{JsArray, JsBox, JsNumber, JsString},
+	types::{JsArray, JsBox, JsBuffer, JsNumber, JsString},
 };
-use std::{cell::RefCell, path::PathBuf};
+use std::{
+	cell::RefCell,
+	io::{BufWriter, Write},
+	path::PathBuf,
+};
 
 type BoxedGeoFile = JsBox<RefCell<GeoDB>>;
 
@@ -36,15 +40,24 @@ impl GeoDB {
 
 		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
-		let (entries, next_index) = geo_file.borrow_mut().find(&bbox, start_index, max_count).unwrap();
-		let n = entries.len() as u32;
+		let (entries, next_index) = geo_file.borrow_mut().query_bbox(&bbox, start_index, max_count).unwrap();
 		let array = cx.empty_array();
-		for (i, entry) in entries.into_iter().enumerate() {
-			let line = cx.string(entry);
-			array.set(&mut cx, i as u32, line)?;
+
+		let mut buffer = BufWriter::new(vec![]);
+		buffer.write(b"[").unwrap();
+		for i in 0..entries.len() {
+			if i != 0 {
+				buffer.write(b",").unwrap();
+			}
+			buffer.write(&entries[i]).unwrap();
 		}
+		buffer.write(b"]").unwrap();
+		let buffer = JsBuffer::external(&mut cx, buffer.into_inner().unwrap());
+		array.set(&mut cx, 0, buffer)?;
+
 		let index = cx.number(next_index as u32);
-		array.set(&mut cx, n, index)?;
+		array.set(&mut cx, 1, index)?;
+
 		return Ok(array);
 	}
 }

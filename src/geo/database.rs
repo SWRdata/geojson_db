@@ -3,44 +3,43 @@ use neon::types::Finalize;
 use std::{error::Error, path::PathBuf, result::Result, time::Instant};
 
 pub struct GeoDB {
-	data: GeoFile,
 	index: GeoIndex,
+	table: GeoFile,
 }
 unsafe impl Send for GeoDB {}
 
 impl GeoDB {
 	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let mut filename_index = filename.clone();
-		filename_index.set_extension("index");
+		filename_index.set_extension("idx");
 
-		let mut data = GeoFile::load(filename)?;
+		let mut filename_table = filename.clone();
+		filename_table.set_extension("dat");
 
-		let index = if filename_index.exists() {
+		let index: GeoIndex = if filename_index.exists() && filename_table.exists() {
 			GeoIndex::load(&filename_index)?
 		} else {
-			GeoIndex::create(&filename_index, &mut data)?
+			let data = &mut GeoFile::load(filename)?;
+			GeoIndex::create(data, &filename_index, &filename_table)?
 		};
 
-		Ok(GeoDB { data, index })
+		let table: GeoFile = GeoFile::load(&filename_table)?;
+
+		Ok(GeoDB { index, table })
 	}
 
-	pub fn find(
+	pub fn query_bbox(
 		&mut self, bbox: &GeoBBox, start_index: usize, max_count: usize,
-	) -> Result<(Vec<String>, usize), Box<dyn Error>> {
-		let data = &mut self.data;
-
+	) -> Result<(Vec<Vec<u8>>, usize), Box<dyn Error>> {
 		let start = Instant::now();
-		let (entries, next_index) = self.index.collect_leaves(bbox, start_index, max_count);
+		let (leaves, next_index) = self.index.query_bbox(bbox, start_index, max_count);
 		println!("A {:?}", start.elapsed());
 
 		let start = Instant::now();
-		let entries: Vec<String> = entries
-			.iter()
-			.map(|node| String::from_utf8(data.read_range(node.value1, node.value2).unwrap().to_vec()).unwrap())
-			.collect();
-
+		let chunks: Vec<Vec<u8>> = self.table.read_ranges(leaves)?;
 		println!("B {:?}", start.elapsed());
-		Ok((entries, next_index))
+
+		Ok((chunks, next_index))
 	}
 }
 

@@ -1,26 +1,47 @@
 use super::{GeoBBox, GeoFile, GeoNode};
 use serde::{Deserialize, Serialize};
-use std::{error::Error, fs, path::PathBuf, result::Result};
+use std::{
+	error::Error,
+	fs::{read, write, File},
+	io::{BufWriter, Seek, Write},
+	path::PathBuf,
+	result::Result,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct GeoIndex {
 	nodes: Vec<GeoNode>,
 }
 impl GeoIndex {
-	pub fn create(filename_index: &PathBuf, geo_data: &mut GeoFile) -> Result<Self, Box<dyn Error>> {
+	pub fn create(
+		geo_data: &mut GeoFile, filename_index: &PathBuf, filename_table: &PathBuf,
+	) -> Result<Self, Box<dyn Error>> {
 		let mut entries = geo_data.get_entries()?;
 		let mut index = GeoIndex { nodes: Vec::new() };
 		index.create_tree(entries.as_mut_slice());
+		index.rewrite_table(geo_data, filename_table)?;
 		index.save(filename_index)?;
 		Ok(index)
 	}
 	pub fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
-		let bytes = fs::read(filename_index)?;
+		let bytes = read(filename_index)?;
 		let index = bincode::deserialize(&bytes)?;
 		Ok(index)
 	}
 	fn save(&self, filename_index: &PathBuf) -> Result<(), Box<dyn Error>> {
-		fs::write(filename_index, bincode::serialize(self)?)?;
+		write(filename_index, bincode::serialize(self)?)?;
+		Ok(())
+	}
+	fn rewrite_table(&mut self, geo_data: &mut GeoFile, filename_table: &PathBuf) -> Result<(), Box<dyn Error>> {
+		let mut file = BufWriter::new(File::create(filename_table)?);
+		for i in 0..self.nodes.len() {
+			if self.nodes[i].is_leaf {
+				let node = self.nodes.get_mut(i).unwrap();
+				let buffer = geo_data.read_range(node.value1, node.value2)?;
+				node.value1 = file.stream_position()? as usize;
+				node.value2 = file.write(buffer)?;
+			}
+		}
 		Ok(())
 	}
 	fn create_tree(&mut self, leaves: &mut [GeoNode]) {
@@ -71,7 +92,7 @@ impl GeoIndex {
 			}
 		}
 	}
-	pub fn collect_leaves(&self, bbox: &GeoBBox, start_index: usize, max_count: usize) -> (Vec<&GeoNode>, usize) {
+	pub fn query_bbox(&self, bbox: &GeoBBox, start_index: usize, max_count: usize) -> (Vec<&GeoNode>, usize) {
 		let mut leaves: Vec<&GeoNode> = Vec::with_capacity(max_count);
 		let mut index = start_index;
 
