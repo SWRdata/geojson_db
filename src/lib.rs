@@ -44,21 +44,21 @@ impl GeoDB {
 		let array = cx.empty_array();
 
 		let mut buffer = BufWriter::new(vec![]);
-		buffer.write(b"[").unwrap();
-		for i in 0..entries.len() {
+		buffer.write_all(b"[").unwrap();
+		for (i, entry) in entries.iter().enumerate() {
 			if i != 0 {
-				buffer.write(b",").unwrap();
+				buffer.write_all(b",").unwrap();
 			}
-			buffer.write(&entries[i]).unwrap();
+			buffer.write_all(entry).unwrap();
 		}
-		buffer.write(b"]").unwrap();
+		buffer.write_all(b"]").unwrap();
 		let buffer = JsBuffer::external(&mut cx, buffer.into_inner().unwrap());
 		array.set(&mut cx, 0, buffer)?;
 
 		let index = cx.number(next_index as u32);
 		array.set(&mut cx, 1, index)?;
 
-		return Ok(array);
+		Ok(array)
 	}
 }
 

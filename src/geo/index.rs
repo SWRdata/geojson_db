@@ -39,7 +39,8 @@ impl GeoIndex {
 				let node = self.nodes.get_mut(i).unwrap();
 				let buffer = geo_data.read_range(node.value1, node.value2)?;
 				node.value1 = file.stream_position()? as usize;
-				node.value2 = file.write(buffer)?;
+				node.value2 = buffer.len();
+				file.write_all(buffer)?;
 			}
 		}
 		Ok(())
@@ -100,7 +101,7 @@ impl GeoIndex {
 			let node = &self.nodes[index];
 			if node.bbox.overlap_bbox(bbox) {
 				if node.is_leaf {
-					leaves.push(&node);
+					leaves.push(node);
 					index = node.next;
 					if leaves.len() >= max_count {
 						break;
