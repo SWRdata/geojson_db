@@ -13,10 +13,10 @@ use std::{
 	path::PathBuf,
 };
 
-type BoxedGeoFile = JsBox<RefCell<GeoDB>>;
+type BoxedGeoDB = JsBox<RefCell<GeoDB>>;
 
 impl GeoDB {
-	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoFile> {
+	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoDB> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
 		let _memory_size = cx
 			.argument::<JsNumber>(1)
@@ -27,7 +27,7 @@ impl GeoDB {
 		return Ok(cx.boxed(RefCell::new(geo_file)));
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsArray> {
-		let geo_file = cx.this().downcast_or_throw::<BoxedGeoFile, _>(&mut cx)?;
+		let geo_db = cx.this().downcast_or_throw::<BoxedGeoDB, _>(&mut cx)?;
 
 		let bbox = cx.argument::<JsArray>(0)?.to_vec(&mut cx)?;
 		let bbox: Vec<f64> = bbox
@@ -40,7 +40,7 @@ impl GeoDB {
 
 		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
-		let (entries, next_index) = geo_file.borrow_mut().query_bbox(&bbox, start_index, max_count).unwrap();
+		let (entries, next_index) = geo_db.borrow_mut().query_bbox(&bbox, start_index, max_count).unwrap();
 		let array = cx.empty_array();
 
 		let mut buffer = BufWriter::new(vec![]);
