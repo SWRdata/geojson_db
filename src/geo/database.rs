@@ -9,7 +9,7 @@ pub struct GeoDB {
 unsafe impl Send for GeoDB {}
 
 impl GeoDB {
-	pub fn open(filename: &PathBuf, memory_size: usize) -> Result<Self, Box<dyn Error>> {
+	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let mut filename_index = filename.clone();
 		filename_index.set_extension("index");
 
