@@ -2,6 +2,8 @@ use super::{GeoBBox, GeoFile, GeoIndex};
 use neon::types::Finalize;
 use std::{error::Error, path::PathBuf, result::Result};
 
+pub type IteratorResult<'a> = (Vec<&'a [u8]>, usize);
+
 pub struct GeoDB {
 	index: GeoIndex,
 	table: GeoFile,
@@ -29,7 +31,7 @@ impl GeoDB {
 
 	pub fn query_bbox(
 		&self, bbox: &GeoBBox, start_index: usize, max_count: usize,
-	) -> Result<(Vec<&[u8]>, usize), Box<dyn Error>> {
+	) -> Result<IteratorResult, Box<dyn Error>> {
 		let (leaves, next_index) = self.index.query_bbox(bbox, start_index, max_count);
 		let chunks: Vec<&[u8]> = self.table.read_ranges(leaves);
 		Ok((chunks, next_index))

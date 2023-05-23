@@ -53,7 +53,7 @@ impl GeoIndex {
 				let node = self.nodes.get_mut(i).unwrap();
 				let buffer = geo_data.read_range(node.value1, node.value2);
 				node.value1 = pos;
-				file.write_all(&buffer)?;
+				file.write_all(buffer)?;
 				pos += node.value2;
 			}
 		}
