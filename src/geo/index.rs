@@ -17,19 +17,11 @@ impl GeoIndex {
 	pub fn create(
 		geo_data: &mut GeoFile, filename_index: &PathBuf, filename_table: &PathBuf,
 	) -> Result<Self, Box<dyn Error>> {
-		println!("get_entries");
 		let mut entries = geo_data.get_entries()?;
-
 		let mut index = GeoIndex { nodes: Vec::new() };
-		println!("create_tree");
 		index.create_tree(entries.as_mut_slice());
-
-		println!("rewrite_table");
 		index.rewrite_table(geo_data, filename_table)?;
-
-		println!("save index");
 		index.save(filename_index)?;
-
 		Ok(index)
 	}
 	pub fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
@@ -47,7 +39,7 @@ impl GeoIndex {
 		let start = Instant::now();
 
 		for i in 0..self.nodes.len() {
-			if i % 1000 == 0 {
+			if i % 1000000 == 0 {
 				println!(
 					"rewrite_table: {}, {:.1}%, {:.0}/s, {:.1}MB/s",
 					i,

@@ -1,6 +1,6 @@
 use super::{GeoBBox, GeoFile, GeoIndex};
 use neon::types::Finalize;
-use std::{error::Error, path::PathBuf, result::Result, time::Instant};
+use std::{error::Error, path::PathBuf, result::Result};
 
 pub struct GeoDB {
 	index: GeoIndex,
@@ -17,33 +17,21 @@ impl GeoDB {
 		filename_table.set_extension("dat");
 
 		let index: GeoIndex = if filename_index.exists() && filename_table.exists() {
-			println!("load index");
 			GeoIndex::load(&filename_index)?
 		} else {
-			println!("load file temporary");
 			let data = &mut GeoFile::load(filename)?;
-
-			println!("create index");
 			GeoIndex::create(data, &filename_index, &filename_table)?
 		};
 
-		println!("load file");
 		let table: GeoFile = GeoFile::load(&filename_table)?;
-
 		Ok(GeoDB { index, table })
 	}
 
 	pub fn query_bbox(
 		&self, bbox: &GeoBBox, start_index: usize, max_count: usize,
 	) -> Result<(Vec<&[u8]>, usize), Box<dyn Error>> {
-		let start = Instant::now();
 		let (leaves, next_index) = self.index.query_bbox(bbox, start_index, max_count);
-		println!("A {:?}", start.elapsed());
-
-		let start = Instant::now();
 		let chunks: Vec<&[u8]> = self.table.read_ranges(leaves);
-		println!("B {:?}", start.elapsed());
-
 		Ok((chunks, next_index))
 	}
 }

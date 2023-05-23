@@ -59,8 +59,8 @@ impl GeoDB {
 		let buffer = JsBuffer::external(&mut cx, buffer.into_inner().unwrap());
 		array.set(&mut cx, 0, buffer)?;
 
-		let index = cx.number(next_index as u32);
-		array.set(&mut cx, 1, index)?;
+		let next_index = cx.number(next_index as u32);
+		array.set(&mut cx, 1, next_index)?;
 
 		Ok(array)
 	}
