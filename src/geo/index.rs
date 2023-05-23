@@ -43,7 +43,9 @@ impl GeoIndex {
 	}
 	fn rewrite_table(&mut self, geo_data: &mut GeoFile, filename_table: &PathBuf) -> Result<(), Box<dyn Error>> {
 		let mut file = BufWriter::new(File::create(filename_table)?);
+		let mut pos: usize = 0;
 		let start = Instant::now();
+
 		for i in 0..self.nodes.len() {
 			if i % 1000 == 0 {
 				println!(
@@ -57,10 +59,10 @@ impl GeoIndex {
 
 			if self.nodes[i].is_leaf {
 				let node = self.nodes.get_mut(i).unwrap();
-				let buffer = geo_data.read_range(node.value1, node.value2)?;
-				node.value1 = file.stream_position()? as usize;
-				node.value2 = buffer.len();
+				let buffer = geo_data.read_range(node.value1, node.value2);
+				node.value1 = pos;
 				file.write_all(&buffer)?;
+				pos += node.value2;
 			}
 		}
 		Ok(())

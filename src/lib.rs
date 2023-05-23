@@ -18,18 +18,20 @@ type BoxedGeoDB = JsBox<RefCell<GeoDB>>;
 impl GeoDB {
 	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoDB> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
-		let memory_size = cx
+
+		let _memory_size = cx
 			.argument::<JsNumber>(1)
 			.unwrap_or(cx.number(64 * 1204 * 1024))
 			.value(&mut cx) as usize;
 
-		match GeoDB::open(&filename, memory_size) {
+		match GeoDB::open(&filename) {
 			Ok(geo_file) => Ok(cx.boxed(RefCell::new(geo_file))),
 			Err(err) => cx.throw_error(err.to_string()),
 		}
 	}
 	pub fn js_find(mut cx: FunctionContext) -> JsResult<JsArray> {
-		let geo_db = cx.this().downcast_or_throw::<BoxedGeoDB, _>(&mut cx)?;
+		let geo_db_js = cx.this().downcast_or_throw::<BoxedGeoDB, _>(&mut cx)?;
+		let geo_db = geo_db_js.borrow();
 
 		let bbox = cx.argument::<JsArray>(0)?.to_vec(&mut cx)?;
 		let bbox: Vec<f64> = bbox
@@ -42,7 +44,7 @@ impl GeoDB {
 
 		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
-		let (entries, next_index) = geo_db.borrow_mut().query_bbox(&bbox, start_index, max_count).unwrap();
+		let (entries, next_index) = geo_db.query_bbox(&bbox, start_index, max_count).unwrap();
 		let array = cx.empty_array();
 
 		let mut buffer = BufWriter::new(vec![]);
