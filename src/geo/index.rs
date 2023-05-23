@@ -100,7 +100,7 @@ impl GeoIndex {
 				});
 				let value1 = create_tree_rec(part1, nodes);
 				let value2 = create_tree_rec(part2, nodes);
-				let mut node = nodes.get_mut(index).unwrap();
+				let node = nodes.get_mut(index).unwrap();
 				node.value1 = value1;
 				node.value2 = value2;
 				index
