@@ -1,17 +1,26 @@
 [package]
 name = "geojson_db"
 version = "0.1.0"
-authors = ["Michael Kreil <github@michael-kreil.de> (https://github.com/MichaelKreil)"]
+authors = ["Michael Kreil <github@michael-kreil.de>"]
+homepage = "https://github.com/SWRdata/geojson_db"
+repository = "https://github.com/SWRdata/geojson_db.git"
 license = "MIT"
 edition = "2018"
+description = "High-performance spatial queries on GeoJSON files"
+readme = "README.md"
 exclude = ["index.node"]
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-bincode = { version = "1.3.3", default-features = false, features = [] }
-geojson = { version = "0.24.1", default-features = false, features = [] }
-memmap2 = { version = "0.6.1", default-features = false, features = [] }
+bincode = { version = "1.3.3", default-features = false }
+geojson = { version = "0.24.1", default-features = false }
+memmap2 = { version = "0.6.1", default-features = false }
 neon = { version = "0.10.1", default-features = false, features = ["napi-6"] }
 serde = { version = "1.0.163", default-features = false, features = ["std"] }
+
+[workspace]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
