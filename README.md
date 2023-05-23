@@ -8,7 +8,7 @@ This project was initially bootstrapped with [create-neon](https://www.npmjs.com
 ```javascript
 import Geofile from 'geojson_db';
 
-let file = new Geofile('./data/adresse.geojsonl');
+let file = new Geofile('features.geojsonl');
 
 let bbox = [7, 49, 8, 50];
 for (let feature of file.find(bbox)) {
