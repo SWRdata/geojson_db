@@ -1,19 +1,44 @@
 {
   "name": "geojson_db",
   "version": "0.1.0",
-  "description": "",
+  "description": "A high-performance npm package for rapid spatial queries on GeoJSON files",
   "main": "index.js",
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics",
-    "build-debug": "npm run build --",
+    "build-debug": "npm run build",
     "build-release": "npm run build -- --release",
     "install": "npm run build-release",
     "test": "cargo test"
   },
-  "author": "Michael Kreil <github@michael-kreil.de> (https://github.com/MichaelKreil)",
+  "author": {
+    "name": "Michael Kreil",
+    "email": "github@michael-kreil.de",
+    "url": "https://github.com/MichaelKreil"
+  },
   "license": "MIT",
   "type": "module",
   "devDependencies": {
     "cargo-cp-artifact": "^0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SWRdata/geojson_db.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SWRdata/geojson_db/issues"
+  },
+  "homepage": "https://github.com/SWRdata/geojson_db#readme",
+  "keywords": [
+    "geojson",
+    "database",
+    "spatial",
+    "queries",
+    "neon",
+    "rust",
+    "nodejs"
+  ],
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=7.0.0"
   }
 }
