@@ -2,8 +2,6 @@
 
 GeoJSON DB is a high-performance npm package designed to facilitate rapid spatial queries on GeoJSON files. Currently, it supports only `.geojsonl` files (line-delimited GeoJSON Features). Due to its in-memory architecture, ensure you have sufficient memory available to load the file.
 
-This project was initially bootstrapped with [create-neon](https://www.npmjs.com/package/create-neon). 
-
 ## Example Usage
 ```javascript
 import Geofile from 'geojson_db';
@@ -12,7 +10,7 @@ let file = new Geofile('features.geojsonl');
 
 let bbox = [7, 49, 8, 50];
 for (let feature of file.find(bbox)) {
-	console.log(feature);
+   console.log(feature);
 }
 ```
 
