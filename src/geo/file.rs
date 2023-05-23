@@ -7,6 +7,7 @@ use std::{
 	path::PathBuf,
 	result::Result,
 	str::FromStr,
+	time::Instant,
 };
 
 pub struct GeoFile {
@@ -36,9 +37,24 @@ impl GeoFile {
 		let mut entries: Vec<GeoNode> = Vec::new();
 		let mut line = String::new();
 		let mut byte_count: usize;
+		let mut line_no: usize = 0;
+		let file_size: f64 = self.file.get_ref().metadata().unwrap().len() as f64 / 100.;
+		let start = Instant::now();
 
 		loop {
+			line_no += 1;
+
 			let current_pos = self.file.stream_position()?;
+			if line_no % 1000000 == 0 {
+				println!(
+					"get_entries: {}, {:.1}%, {:.0}/s, {:.1}MB/s",
+					line_no,
+					current_pos as f64 / file_size,
+					line_no as f64 / start.elapsed().as_secs_f64(),
+					(current_pos as f64 / 1048576.) / start.elapsed().as_secs_f64()
+				)
+			}
+
 			match self.file.read_line(&mut line) {
 				Ok(count) => {
 					if count == 0 {

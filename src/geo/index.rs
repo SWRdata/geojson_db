@@ -6,6 +6,7 @@ use std::{
 	io::{BufWriter, Seek, Write},
 	path::PathBuf,
 	result::Result,
+	time::Instant,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -16,11 +17,19 @@ impl GeoIndex {
 	pub fn create(
 		geo_data: &mut GeoFile, filename_index: &PathBuf, filename_table: &PathBuf,
 	) -> Result<Self, Box<dyn Error>> {
+		println!("get_entries");
 		let mut entries = geo_data.get_entries()?;
+
 		let mut index = GeoIndex { nodes: Vec::new() };
+		println!("create_tree");
 		index.create_tree(entries.as_mut_slice());
+
+		println!("rewrite_table");
 		index.rewrite_table(geo_data, filename_table)?;
+
+		println!("save index");
 		index.save(filename_index)?;
+
 		Ok(index)
 	}
 	pub fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
@@ -34,7 +43,18 @@ impl GeoIndex {
 	}
 	fn rewrite_table(&mut self, geo_data: &mut GeoFile, filename_table: &PathBuf) -> Result<(), Box<dyn Error>> {
 		let mut file = BufWriter::new(File::create(filename_table)?);
+		let start = Instant::now();
 		for i in 0..self.nodes.len() {
+			if i % 1000 == 0 {
+				println!(
+					"rewrite_table: {}, {:.1}%, {:.0}/s, {:.1}MB/s",
+					i,
+					100. * i as f64 / self.nodes.len() as f64,
+					i as f64 / start.elapsed().as_secs_f64(),
+					file.stream_position()? as f64 / 1048576. / start.elapsed().as_secs_f64()
+				)
+			}
+
 			if self.nodes[i].is_leaf {
 				let node = self.nodes.get_mut(i).unwrap();
 				let buffer = geo_data.read_range(node.value1, node.value2)?;
