@@ -40,5 +40,11 @@
   "engines": {
     "node": ">=14.0.0",
     "npm": ">=7.0.0"
-  }
+  },
+  "files": [
+    "Cargo.lock",
+    "Cargo.toml",
+    "index.js",
+    "src/**"
+  ]
 }
