@@ -1,6 +1,6 @@
 {
   "name": "geojson_db",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A high-performance npm package for rapid spatial queries on GeoJSON files",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "license": "MIT",
   "type": "module",
-  "devDependencies": {
+  "dependencies": {
     "cargo-cp-artifact": "^0.1"
   },
   "repository": {
