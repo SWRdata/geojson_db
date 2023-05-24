@@ -65,3 +65,30 @@ impl GeoNode {
 		}
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_new_leaf() {
+		let bbox = GeoBBox::new(1.0, 2.0, 3.0, 4.0);
+		let leaf = GeoNode::new_leaf(bbox.clone(), 10, 20);
+		assert_eq!(leaf.bbox, bbox);
+		assert_eq!(leaf.is_leaf, true);
+		assert_eq!(leaf.value1, 10);
+		assert_eq!(leaf.value2, 20);
+		assert_eq!(leaf.next, 0);
+	}
+
+	#[test]
+	fn test_new_node() {
+		let bbox = GeoBBox::new(1.0, 2.0, 3.0, 4.0);
+		let node = GeoNode::new_node(bbox.clone());
+		assert_eq!(node.bbox, bbox);
+		assert_eq!(node.is_leaf, false);
+		assert_eq!(node.value1, 0);
+		assert_eq!(node.value2, 0);
+		assert_eq!(node.next, 0);
+	}
+}

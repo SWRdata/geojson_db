@@ -127,3 +127,48 @@ impl GeoIndex {
 		(leaves, index)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	/*
+	use super::*;
+	use std::fs;
+
+	#[test]
+	fn test_create_and_save_geo_index() {
+		let mut geofile = GeoFile::new(); // You'll need to add your own logic for creating a GeoFile instance.
+		let filename_index = PathBuf::from("test.index");
+		let filename_table = PathBuf::from("test.table");
+		let result = GeoIndex::create(&mut geofile, &filename_index, &filename_table);
+
+		assert!(result.is_ok());
+		assert!(filename_index.exists());
+		assert!(filename_table.exists());
+
+		fs::remove_file(filename_index).unwrap();
+		fs::remove_file(filename_table).unwrap();
+	}
+
+	#[test]
+	fn test_load_geo_index() {
+		let filename_index = PathBuf::from("test.index");
+
+		// Assuming that there is a valid index file.
+		let result = GeoIndex::load(&filename_index);
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_query_bbox() {
+		let filename_index = PathBuf::from("test.index");
+
+		let geo_index = GeoIndex::load(&filename_index).unwrap();
+		let bbox = GeoBBox::new(1.0, 2.0, 3.0, 4.0);
+
+		let (leaves, _) = geo_index.query_bbox(&bbox, 0, 100);
+
+		assert!(leaves.len() > 0); // Assuming there is at least one leaf in this bounding box.
+	}
+	 */
+}

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // GeoBBox struct representing a geographical bounding box with min and max coordinates
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct GeoBBox {
 	x_min: f32, // minimum x-coordinate
 	x_max: f32, // maximum x-coordinate
@@ -95,5 +95,83 @@ impl GeoBBox {
 	// Compute the sum of y coordinates
 	pub fn sum_y(&self) -> f32 {
 		self.y_min + self.y_max
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_new() {
+		let bbox = GeoBBox::new(1.0, 2.0, 3.0, 4.0);
+		assert_eq!(bbox.x_min, 1.0);
+		assert_eq!(bbox.x_max, 2.0);
+		assert_eq!(bbox.y_min, 3.0);
+		assert_eq!(bbox.y_max, 4.0);
+	}
+
+	#[test]
+	fn test_new_point() {
+		let bbox = GeoBBox::new_point(1.0, 2.0);
+		assert_eq!(bbox.x_min, 1.0);
+		assert_eq!(bbox.x_max, 1.0);
+		assert_eq!(bbox.y_min, 2.0);
+		assert_eq!(bbox.y_max, 2.0);
+	}
+
+	#[test]
+	fn test_new_empty() {
+		let bbox = GeoBBox::new_empty();
+		assert_eq!(bbox.x_min, f32::MAX);
+		assert_eq!(bbox.x_max, f32::MIN);
+		assert_eq!(bbox.y_min, f32::MAX);
+		assert_eq!(bbox.y_max, f32::MIN);
+	}
+
+	#[test]
+	fn test_include_point() {
+		let mut bbox = GeoBBox::new_empty();
+		bbox.include_point(1.0, 2.0);
+		assert_eq!(bbox.x_min, 1.0);
+		assert_eq!(bbox.x_max, 1.0);
+		assert_eq!(bbox.y_min, 2.0);
+		assert_eq!(bbox.y_max, 2.0);
+	}
+
+	#[test]
+	fn test_include_bbox() {
+		let mut bbox = GeoBBox::new(1.0, 2.0, 1.0, 2.0);
+		let bbox2 = GeoBBox::new(0.0, 3.0, 0.0, 3.0);
+		bbox.include_bbox(&bbox2);
+		assert_eq!(bbox.x_min, 0.0);
+		assert_eq!(bbox.x_max, 3.0);
+		assert_eq!(bbox.y_min, 0.0);
+		assert_eq!(bbox.y_max, 3.0);
+	}
+
+	#[test]
+	fn test_is_horizontal() {
+		let bbox = GeoBBox::new(1.0, 3.0, 1.0, 2.0);
+		assert_eq!(bbox.is_horizontal(), true);
+	}
+
+	#[test]
+	fn test_overlap_bbox() {
+		let bbox = GeoBBox::new(1.0, 3.0, 1.0, 3.0);
+		let bbox2 = GeoBBox::new(2.0, 4.0, 2.0, 4.0);
+		assert_eq!(bbox.overlap_bbox(&bbox2), true);
+	}
+
+	#[test]
+	fn test_sum_x() {
+		let bbox = GeoBBox::new(1.0, 2.0, 1.0, 2.0);
+		assert_eq!(bbox.sum_x(), 3.0);
+	}
+
+	#[test]
+	fn test_sum_y() {
+		let bbox = GeoBBox::new(1.0, 2.0, 1.0, 2.0);
+		assert_eq!(bbox.sum_y(), 3.0);
 	}
 }
