@@ -91,13 +91,7 @@ impl GeoIndex {
 				}
 				let (part1, part2) = leaves.split_at_mut(leaves.len() / 2);
 				let index = nodes.len();
-				nodes.push(GeoNode {
-					bbox,
-					is_leaf: false,
-					value1: 0,
-					value2: 0,
-					next: 0,
-				});
+				nodes.push(GeoNode::new_node(bbox));
 				let value1 = create_tree_rec(part1, nodes);
 				let value2 = create_tree_rec(part2, nodes);
 				let node = nodes.get_mut(index).unwrap();
