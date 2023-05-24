@@ -4,11 +4,13 @@ use std::{error::Error, path::PathBuf, result::Result};
 
 pub type IteratorResult<'a> = (Vec<&'a [u8]>, usize);
 
+#[derive(Debug)]
 pub struct GeoDB {
 	index: GeoIndex,
 	table: GeoTable,
 }
 unsafe impl Send for GeoDB {}
+impl Finalize for GeoDB {}
 
 impl GeoDB {
 	pub fn open(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
@@ -36,5 +38,3 @@ impl GeoDB {
 		Ok((chunks, next_index))
 	}
 }
-
-impl Finalize for GeoDB {}

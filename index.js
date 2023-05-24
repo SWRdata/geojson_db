@@ -6,8 +6,11 @@ const { geofileOpen, geofileFind } = require('./index.node');
 
 export default class Geofile {
 	#me;
-	constructor(filename, memory_size = 64 * 1024 * 1024) {
-		this.#me = geofileOpen(filename, memory_size);
+	constructor(filename, options = {}) {
+		if (typeof options !== 'object') {
+			throw Error ("options must be an object or undefined")
+		}
+		this.#me = geofileOpen(filename, options);
 	}
 
 	* find(bbox) {

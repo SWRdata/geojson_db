@@ -4,16 +4,19 @@ use std::{error::Error, ffi::OsStr, fs::File, path::PathBuf, result::Result, str
 
 type BboxExtractor = Box<dyn Fn(&str) -> GeoBBox>;
 
+#[derive(Debug)]
 pub struct GeoFileOptions {
 	pub separator: Option<String>,
 	pub col_x: Option<usize>,
 	pub col_y: Option<usize>,
+	pub skip_lines: Option<usize>,
 }
 
 pub struct GeoFile {
 	_file: File,
 	mmap: Mmap,
 	extractor: BboxExtractor,
+	skip_lines: usize,
 }
 impl GeoFile {
 	pub fn load(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
@@ -39,10 +42,12 @@ impl GeoFile {
 		};
 		let file = File::open(filename).unwrap();
 		let mmap = unsafe { Mmap::map(&file)? };
+
 		Ok(Self {
 			_file: file,
 			mmap,
 			extractor,
+			skip_lines: opt.skip_lines.unwrap_or(0),
 		})
 	}
 
@@ -73,8 +78,12 @@ impl GeoFile {
 						current_pos as f64 / 1048576. / start.elapsed().as_secs_f64()
 					)
 				}
-				let line = from_utf8(&self.mmap[current_pos..i])?;
-				entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
+
+				if line_no > self.skip_lines {
+					let line = from_utf8(&self.mmap[current_pos..i])?;
+					entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
+				}
+
 				current_pos = i + 1;
 			}
 		}

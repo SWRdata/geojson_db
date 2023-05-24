@@ -22,16 +22,16 @@ impl GeoDB {
 
 		let opt = GeoFileOptions {
 			separator: options
-				.get::<JsString, _, _>(&mut cx, "separator")
-				.ok()
+				.get_opt::<JsString, _, _>(&mut cx, "separator")?
 				.map(|v| v.value(&mut cx)),
 			col_x: options
-				.get::<JsNumber, _, _>(&mut cx, "colX")
-				.ok()
+				.get_opt::<JsNumber, _, _>(&mut cx, "colX")?
 				.map(|v| v.value(&mut cx) as usize),
 			col_y: options
-				.get::<JsNumber, _, _>(&mut cx, "colY")
-				.ok()
+				.get_opt::<JsNumber, _, _>(&mut cx, "colY")?
+				.map(|v| v.value(&mut cx) as usize),
+			skip_lines: options
+				.get_opt::<JsNumber, _, _>(&mut cx, "skipLine")?
 				.map(|v| v.value(&mut cx) as usize),
 		};
 

@@ -2,6 +2,7 @@ use super::GeoNode;
 use memmap2::Mmap;
 use std::{error::Error, fs::File, path::PathBuf, result::Result};
 
+#[derive(Debug)]
 pub struct GeoTable {
 	_file: File,
 	mmap: Mmap,
