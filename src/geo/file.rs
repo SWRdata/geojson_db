@@ -1,17 +1,35 @@
-use super::GeoNode;
-
+use super::{GeoBBox, GeoNode};
 use memmap2::Mmap;
-use std::{error::Error, fs::File, path::PathBuf, result::Result, str::from_utf8, time::Instant};
+use std::{error::Error, ffi::OsStr, fs::File, path::PathBuf, result::Result, str::from_utf8, time::Instant};
+
+type BboxExtractor = Box<dyn Fn(&str) -> GeoBBox>;
 
 pub struct GeoFile {
 	_file: File,
 	mmap: Mmap,
+	extractor: BboxExtractor,
 }
 impl GeoFile {
 	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
+		let extractor: BboxExtractor = match filename.extension().and_then(OsStr::to_str) {
+			Some("geojsonl") => Box::new(make_bbox::from_geojson),
+			Some("geojson") => Box::new(make_bbox::from_geojson),
+			Some("csv") => make_bbox::make_from_csv(',', 0, 1),
+			Some("tsv") => make_bbox::make_from_csv('\t', 0, 1),
+			_ => {
+				return Err(Box::new(std::io::Error::new(
+					std::io::ErrorKind::InvalidInput,
+					format!("Unsupported file extension: {}", filename.to_string_lossy()),
+				)))
+			}
+		};
 		let file = File::open(filename).unwrap();
 		let mmap = unsafe { Mmap::map(&file)? };
-		Ok(Self { _file: file, mmap })
+		Ok(Self {
+			_file: file,
+			mmap,
+			extractor,
+		})
 	}
 
 	pub fn read_range(&self, start: usize, length: usize) -> &[u8] {
@@ -24,6 +42,7 @@ impl GeoFile {
 		let file_size: f64 = self.mmap.len() as f64 / 100.;
 		let start = Instant::now();
 		let mut current_pos: usize = 0;
+		let extractor = &self.extractor;
 
 		for i in 0..self.mmap.len() {
 			if self.mmap[i] == 10 {
@@ -41,11 +60,7 @@ impl GeoFile {
 					)
 				}
 				let line = from_utf8(&self.mmap[current_pos..i])?;
-				entries.push(GeoNode::new_leaf(
-					make_bbox::from_geojson(line),
-					current_pos,
-					i - current_pos,
-				));
+				entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
 				current_pos = i + 1;
 			}
 		}
@@ -55,6 +70,7 @@ impl GeoFile {
 }
 
 mod make_bbox {
+	use super::BboxExtractor;
 	use crate::geo::GeoBBox;
 	use geojson::Feature;
 	use std::str::FromStr;
@@ -107,5 +123,14 @@ mod make_bbox {
 	// Create a GeoBBox from a 1D vector, treating both x and y as same
 	fn from_vec(v1: &[f64]) -> GeoBBox {
 		GeoBBox::new_point(v1[0] as f32, v1[1] as f32)
+	}
+
+	pub fn make_from_csv(sep: char, col_x: usize, col_y: usize) -> BboxExtractor {
+		Box::new(move |line: &str| -> GeoBBox {
+			let fields: Vec<&str> = line.split(sep).collect();
+			let x: f32 = fields[col_x].parse().unwrap();
+			let y: f32 = fields[col_y].parse().unwrap();
+			GeoBBox::new_point(x, y)
+		})
 	}
 }
