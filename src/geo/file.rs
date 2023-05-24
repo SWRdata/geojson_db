@@ -1,4 +1,4 @@
-use super::{GeoBBox, GeoNode};
+use super::GeoNode;
 
 use memmap2::Mmap;
 use std::{error::Error, fs::File, path::PathBuf, result::Result, str::from_utf8, time::Instant};
@@ -42,7 +42,7 @@ impl GeoFile {
 				}
 				let line = from_utf8(&self.mmap[current_pos..i])?;
 				entries.push(GeoNode::new_leaf(
-					GeoBBox::from_geojson(line),
+					make_bbox::from_geojson(line),
 					current_pos,
 					i - current_pos,
 				));
@@ -51,5 +51,61 @@ impl GeoFile {
 		}
 
 		Ok(entries)
+	}
+}
+
+mod make_bbox {
+	use crate::geo::GeoBBox;
+	use geojson::Feature;
+	use std::str::FromStr;
+
+	// Create a GeoBBox from a geojson String
+	pub fn from_geojson(line: &str) -> GeoBBox {
+		let feature = Feature::from_str(line).unwrap();
+		from_geometry(&feature.geometry.unwrap())
+	}
+
+	// Create a GeoBBox from a geojson::Geometry value
+	fn from_geometry(geometry: &geojson::Geometry) -> GeoBBox {
+		match &geometry.value {
+			geojson::Value::Point(c) => from_vec(c),
+			geojson::Value::MultiPoint(c) => from_vec2(c),
+			geojson::Value::LineString(c) => from_vec2(c),
+			geojson::Value::MultiLineString(c) => from_vec3(c),
+			geojson::Value::Polygon(c) => from_vec3(c),
+			geojson::Value::MultiPolygon(c) => from_vec4(c),
+			geojson::Value::GeometryCollection(c) => {
+				let mut bbox = GeoBBox::new_empty();
+				c.iter()
+					.for_each(|geometry| bbox.include_bbox(&from_geometry(geometry)));
+				bbox
+			}
+		}
+	}
+
+	// Create a GeoBBox from a 4D vector, encapsulating all points in the vector
+	fn from_vec4(v4: &[Vec<Vec<Vec<f64>>>]) -> GeoBBox {
+		let mut bbox = GeoBBox::new_empty();
+		v4.iter().for_each(|v3| bbox.include_bbox(&from_vec3(v3)));
+		bbox
+	}
+
+	// Create a GeoBBox from a 3D vector, encapsulating all points in the vector
+	fn from_vec3(v3: &[Vec<Vec<f64>>]) -> GeoBBox {
+		let mut bbox = GeoBBox::new_empty();
+		v3.iter().for_each(|v2| bbox.include_bbox(&from_vec2(v2)));
+		bbox
+	}
+
+	// Create a GeoBBox from a 2D vector, encapsulating all points in the vector
+	fn from_vec2(v2: &[Vec<f64>]) -> GeoBBox {
+		let mut bbox = GeoBBox::new_empty();
+		v2.iter().for_each(|v1| bbox.include_point(v1[0] as f32, v1[1] as f32));
+		bbox
+	}
+
+	// Create a GeoBBox from a 1D vector, treating both x and y as same
+	fn from_vec(v1: &[f64]) -> GeoBBox {
+		GeoBBox::new_point(v1[0] as f32, v1[1] as f32)
 	}
 }
