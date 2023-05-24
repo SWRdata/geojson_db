@@ -12,7 +12,7 @@ unsafe impl Send for GeoDB {}
 
 impl GeoDB {
 	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
-		let stem = filename.file_stem().unwrap().to_str().unwrap();
+		let stem = filename.file_name().unwrap().to_str().unwrap();
 		let filename_index = filename.with_file_name(format!("{}.idx", stem));
 		let filename_table = filename.with_file_name(format!("{}.dat", stem));
 
