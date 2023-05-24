@@ -23,10 +23,6 @@ impl GeoFile {
 		&self.file[start..start + length]
 	}
 
-	pub fn read_ranges(&self, leaves: Vec<&GeoNode>) -> Vec<&[u8]> {
-		leaves.iter().map(|l| self.read_range(l.value1, l.value2)).collect()
-	}
-
 	pub fn get_entries(&mut self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
 		let mut entries: Vec<GeoNode> = Vec::new();
 		let mut line_no: usize = 0;

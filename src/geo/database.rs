@@ -1,4 +1,4 @@
-use super::{GeoBBox, GeoFile, GeoIndex};
+use super::{GeoBBox, GeoFile, GeoIndex, GeoTable};
 use neon::types::Finalize;
 use std::{error::Error, path::PathBuf, result::Result};
 
@@ -6,7 +6,7 @@ pub type IteratorResult<'a> = (Vec<&'a [u8]>, usize);
 
 pub struct GeoDB {
 	index: GeoIndex,
-	table: GeoFile,
+	table: GeoTable,
 }
 unsafe impl Send for GeoDB {}
 
@@ -25,7 +25,7 @@ impl GeoDB {
 			GeoIndex::create(data, &filename_index, &filename_table)?
 		};
 
-		let table: GeoFile = GeoFile::load(&filename_table)?;
+		let table: GeoTable = GeoTable::load(&filename_table)?;
 		Ok(GeoDB { index, table })
 	}
 
