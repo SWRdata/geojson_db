@@ -11,27 +11,29 @@ use std::{
 };
 
 pub struct GeoFile {
-	file: Mmap,
+	file: File,
+	mmap: Mmap,
 }
 impl GeoFile {
 	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
-		let file = unsafe { Mmap::map(&File::open(filename).unwrap())? };
-		Ok(Self { file })
+		let file = File::open(filename).unwrap();
+		let mmap = unsafe { Mmap::map(&file)? };
+		Ok(Self { file, mmap })
 	}
 
 	pub fn read_range(&self, start: usize, length: usize) -> &[u8] {
-		&self.file[start..start + length]
+		&self.mmap[start..start + length]
 	}
 
 	pub fn get_entries(&mut self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
 		let mut entries: Vec<GeoNode> = Vec::new();
 		let mut line_no: usize = 0;
-		let file_size: f64 = self.file.len() as f64 / 100.;
+		let file_size: f64 = self.mmap.len() as f64 / 100.;
 		let start = Instant::now();
 		let mut current_pos: usize = 0;
 
-		for i in 0..self.file.len() {
-			if self.file[i] == 10 {
+		for i in 0..self.mmap.len() {
+			if self.mmap[i] == 10 {
 				// new line break
 
 				line_no += 1;
@@ -45,7 +47,7 @@ impl GeoFile {
 						current_pos as f64 / 1048576. / start.elapsed().as_secs_f64()
 					)
 				}
-				let line = from_utf8(&self.file[current_pos..i])?;
+				let line = from_utf8(&self.mmap[current_pos..i])?;
 				let feature = Feature::from_str(line)?;
 				entries.push(GeoNode::new_leaf(
 					GeoBBox::from_geometry(&feature.geometry.unwrap()),

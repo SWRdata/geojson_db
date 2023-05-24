@@ -34,15 +34,14 @@ impl GeoDB {
 		let geo_db = geo_db_js.borrow();
 
 		let bbox = cx.argument::<JsArray>(0)?.to_vec(&mut cx)?;
-		let bbox: Vec<f64> = bbox
+		let bbox: Vec<f32> = bbox
 			.iter()
-			.map(|v| v.downcast_or_throw::<JsNumber, _>(&mut cx).unwrap().value(&mut cx))
+			.map(|v| v.downcast_or_throw::<JsNumber, _>(&mut cx).unwrap().value(&mut cx) as f32)
 			.collect();
+		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
 		let start_index = cx.argument::<JsNumber>(1)?.value(&mut cx) as usize;
 		let max_count = cx.argument::<JsNumber>(2)?.value(&mut cx) as usize;
-
-		let bbox = GeoBBox::new(bbox[0], bbox[2], bbox[1], bbox[3]);
 
 		let (entries, next_index) = geo_db.query_bbox(&bbox, start_index, max_count).unwrap();
 		let array = cx.empty_array();
