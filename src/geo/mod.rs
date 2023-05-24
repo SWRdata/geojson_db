@@ -8,6 +8,7 @@ mod table;
 pub use bbox::GeoBBox;
 pub use database::GeoDB;
 use file::GeoFile;
+pub use file::GeoFileOptions;
 use index::GeoIndex;
 use node::GeoNode;
 use table::GeoTable;

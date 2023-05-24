@@ -1,11 +1,11 @@
 mod geo;
 
-use geo::{GeoBBox, GeoDB};
+use geo::{GeoBBox, GeoDB, GeoFileOptions};
 use neon::{
 	context::Context,
 	prelude::{FunctionContext, ModuleContext, Object},
 	result::{JsResult, NeonResult},
-	types::{JsArray, JsBox, JsBuffer, JsNumber, JsString},
+	types::{JsArray, JsBox, JsBuffer, JsNumber, JsObject, JsString},
 };
 use std::{
 	cell::RefCell,
@@ -18,13 +18,24 @@ type BoxedGeoDB = JsBox<RefCell<GeoDB>>;
 impl GeoDB {
 	pub fn js_open(mut cx: FunctionContext) -> JsResult<BoxedGeoDB> {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
+		let options = cx.argument::<JsObject>(1).unwrap_or(cx.empty_object());
 
-		let _memory_size = cx
-			.argument::<JsNumber>(1)
-			.unwrap_or(cx.number(64 * 1204 * 1024))
-			.value(&mut cx) as usize;
+		let opt = GeoFileOptions {
+			separator: options
+				.get::<JsString, _, _>(&mut cx, "separator")
+				.ok()
+				.map(|v| v.value(&mut cx)),
+			col_x: options
+				.get::<JsNumber, _, _>(&mut cx, "colX")
+				.ok()
+				.map(|v| v.value(&mut cx) as usize),
+			col_y: options
+				.get::<JsNumber, _, _>(&mut cx, "colY")
+				.ok()
+				.map(|v| v.value(&mut cx) as usize),
+		};
 
-		match GeoDB::open(&filename) {
+		match GeoDB::open(&filename, opt) {
 			Ok(geo_file) => Ok(cx.boxed(RefCell::new(geo_file))),
 			Err(err) => cx.throw_error(err.to_string()),
 		}

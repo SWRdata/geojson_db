@@ -4,18 +4,32 @@ use std::{error::Error, ffi::OsStr, fs::File, path::PathBuf, result::Result, str
 
 type BboxExtractor = Box<dyn Fn(&str) -> GeoBBox>;
 
+pub struct GeoFileOptions {
+	pub separator: Option<String>,
+	pub col_x: Option<usize>,
+	pub col_y: Option<usize>,
+}
+
 pub struct GeoFile {
 	_file: File,
 	mmap: Mmap,
 	extractor: BboxExtractor,
 }
 impl GeoFile {
-	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
+	pub fn load(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
 		let extractor: BboxExtractor = match filename.extension().and_then(OsStr::to_str) {
 			Some("geojsonl") => Box::new(make_bbox::from_geojson),
 			Some("geojson") => Box::new(make_bbox::from_geojson),
-			Some("csv") => make_bbox::make_from_csv(',', 0, 1),
-			Some("tsv") => make_bbox::make_from_csv('\t', 0, 1),
+			Some("csv") => make_bbox::make_from_csv(
+				opt.separator.unwrap_or(String::from(",")),
+				opt.col_x.unwrap_or(0),
+				opt.col_y.unwrap_or(1),
+			),
+			Some("tsv") => make_bbox::make_from_csv(
+				opt.separator.unwrap_or(String::from("\t")),
+				opt.col_x.unwrap_or(0),
+				opt.col_y.unwrap_or(1),
+			),
 			_ => {
 				return Err(Box::new(std::io::Error::new(
 					std::io::ErrorKind::InvalidInput,
@@ -125,9 +139,9 @@ mod make_bbox {
 		GeoBBox::new_point(v1[0] as f32, v1[1] as f32)
 	}
 
-	pub fn make_from_csv(sep: char, col_x: usize, col_y: usize) -> BboxExtractor {
+	pub fn make_from_csv(separator: String, col_x: usize, col_y: usize) -> BboxExtractor {
 		Box::new(move |line: &str| -> GeoBBox {
-			let fields: Vec<&str> = line.split(sep).collect();
+			let fields: Vec<&str> = line.split(&separator).collect();
 			let x: f32 = fields[col_x].parse().unwrap();
 			let y: f32 = fields[col_y].parse().unwrap();
 			GeoBBox::new_point(x, y)

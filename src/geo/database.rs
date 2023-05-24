@@ -1,4 +1,4 @@
-use super::{GeoBBox, GeoFile, GeoIndex, GeoTable};
+use super::{file::GeoFileOptions, GeoBBox, GeoFile, GeoIndex, GeoTable};
 use neon::types::Finalize;
 use std::{error::Error, path::PathBuf, result::Result};
 
@@ -11,7 +11,7 @@ pub struct GeoDB {
 unsafe impl Send for GeoDB {}
 
 impl GeoDB {
-	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
+	pub fn open(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
 		let stem = filename.file_name().unwrap().to_str().unwrap();
 		let filename_index = filename.with_file_name(format!("{}.idx", stem));
 		let filename_table = filename.with_file_name(format!("{}.dat", stem));
@@ -19,7 +19,7 @@ impl GeoDB {
 		let index: GeoIndex = if filename_index.exists() && filename_table.exists() {
 			GeoIndex::load(&filename_index)?
 		} else {
-			GeoIndex::create(&mut GeoFile::load(filename)?, &filename_index, &filename_table)?
+			GeoIndex::create(&mut GeoFile::load(filename, opt)?, &filename_index, &filename_table)?
 		};
 
 		Ok(GeoDB {
