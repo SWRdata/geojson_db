@@ -3,14 +3,14 @@ use memmap2::Mmap;
 use std::{error::Error, fs::File, path::PathBuf, result::Result};
 
 pub struct GeoTable {
-	file: File,
+	_file: File,
 	mmap: Mmap,
 }
 impl GeoTable {
 	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let file = File::open(filename).unwrap();
 		let mmap = unsafe { Mmap::map(&file)? };
-		Ok(Self { file, mmap })
+		Ok(Self { _file: file, mmap })
 	}
 
 	pub fn read_ranges(&self, leaves: Vec<&GeoNode>) -> Vec<&[u8]> {

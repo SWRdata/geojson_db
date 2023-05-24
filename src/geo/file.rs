@@ -1,24 +1,17 @@
 use super::{GeoBBox, GeoNode};
-use geojson::Feature;
+
 use memmap2::Mmap;
-use std::{
-	error::Error,
-	fs::File,
-	path::PathBuf,
-	result::Result,
-	str::{from_utf8, FromStr},
-	time::Instant,
-};
+use std::{error::Error, fs::File, path::PathBuf, result::Result, str::from_utf8, time::Instant};
 
 pub struct GeoFile {
-	file: File,
+	_file: File,
 	mmap: Mmap,
 }
 impl GeoFile {
 	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
 		let file = File::open(filename).unwrap();
 		let mmap = unsafe { Mmap::map(&file)? };
-		Ok(Self { file, mmap })
+		Ok(Self { _file: file, mmap })
 	}
 
 	pub fn read_range(&self, start: usize, length: usize) -> &[u8] {
@@ -48,9 +41,8 @@ impl GeoFile {
 					)
 				}
 				let line = from_utf8(&self.mmap[current_pos..i])?;
-				let feature = Feature::from_str(line)?;
 				entries.push(GeoNode::new_leaf(
-					GeoBBox::from_geometry(&feature.geometry.unwrap()),
+					GeoBBox::from_geojson(line),
 					current_pos,
 					i - current_pos,
 				));
