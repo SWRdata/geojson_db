@@ -12,21 +12,20 @@ unsafe impl Send for GeoDB {}
 
 impl GeoDB {
 	pub fn open(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
-		let mut filename_index = filename.clone();
-		filename_index.set_extension("idx");
-
-		let mut filename_table = filename.clone();
-		filename_table.set_extension("dat");
+		let stem = filename.file_stem().unwrap().to_str().unwrap();
+		let filename_index = filename.with_file_name(format!("{}.idx", stem));
+		let filename_table = filename.with_file_name(format!("{}.dat", stem));
 
 		let index: GeoIndex = if filename_index.exists() && filename_table.exists() {
 			GeoIndex::load(&filename_index)?
 		} else {
-			let data = &mut GeoFile::load(filename)?;
-			GeoIndex::create(data, &filename_index, &filename_table)?
+			GeoIndex::create(&mut GeoFile::load(filename)?, &filename_index, &filename_table)?
 		};
 
-		let table: GeoTable = GeoTable::load(&filename_table)?;
-		Ok(GeoDB { index, table })
+		Ok(GeoDB {
+			index,
+			table: GeoTable::load(&filename_table)?,
+		})
 	}
 
 	pub fn query_bbox(
