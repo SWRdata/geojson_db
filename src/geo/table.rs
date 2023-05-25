@@ -1,23 +1,19 @@
 use super::GeoNode;
-use memmap2::Mmap;
-use std::{error::Error, fs::File, path::PathBuf, result::Result};
+use std::{error::Error, fs::read, path::PathBuf, result::Result};
 
 #[derive(Debug)]
 pub struct GeoTable {
-	_file: File,
-	mmap: Mmap,
+	data: Vec<u8>,
 }
 impl GeoTable {
 	pub fn load(filename: &PathBuf) -> Result<Self, Box<dyn Error>> {
-		let file = File::open(filename).unwrap();
-		let mmap = unsafe { Mmap::map(&file)? };
-		Ok(Self { _file: file, mmap })
+		Ok(Self { data: read(filename)? })
 	}
 
 	pub fn read_ranges(&self, leaves: Vec<&GeoNode>) -> Vec<&[u8]> {
 		leaves
 			.iter()
-			.map(|l| &self.mmap[l.value1..l.value1 + l.value2])
+			.map(|l| &self.data[l.value1..l.value1 + l.value2])
 			.collect()
 	}
 }

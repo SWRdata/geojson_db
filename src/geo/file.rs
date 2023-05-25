@@ -1,8 +1,24 @@
 use super::{GeoBBox, GeoNode};
-use memmap2::Mmap;
-use std::{error::Error, ffi::OsStr, fs::File, path::PathBuf, result::Result, str::from_utf8, time::Instant};
+use brotli_decompressor::{self, BrotliDecompress};
+use libflate::gzip::Decoder;
+use std::{
+	error::Error,
+	ffi::OsStr,
+	fs::{read, File},
+	io::Read,
+	path::PathBuf,
+	result::Result,
+	str::from_utf8,
+	time::Instant,
+};
 
 type BboxExtractor = Box<dyn Fn(&str) -> GeoBBox>;
+
+enum Compression {
+	Brotli,
+	Gzip,
+	None,
+}
 
 #[derive(Debug)]
 pub struct GeoFileOptions {
@@ -13,58 +29,81 @@ pub struct GeoFileOptions {
 }
 
 pub struct GeoFile {
-	_file: File,
-	mmap: Mmap,
+	data: Vec<u8>,
 	extractor: BboxExtractor,
 	skip_lines: usize,
 }
 impl GeoFile {
 	pub fn load(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
-		let extractor: BboxExtractor = match filename.extension().and_then(OsStr::to_str) {
-			Some("geojsonl") => Box::new(make_bbox::from_geojson),
-			Some("geojson") => Box::new(make_bbox::from_geojson),
-			Some("csv") => make_bbox::make_from_csv(
-				opt.separator.unwrap_or(String::from(",")),
+		let (basename, compression) = GeoFile::get_compression(filename);
+		let extractor: BboxExtractor = GeoFile::get_extractor(&basename, &opt)?;
+
+		let data = match compression {
+			Compression::Brotli => {
+				let mut temp = Vec::new();
+				BrotliDecompress(&mut File::open(filename)?, &mut temp)?;
+				temp
+			}
+			Compression::Gzip => {
+				let mut temp = Vec::new();
+				Decoder::new(&File::open(filename)?)?.read_to_end(&mut temp)?;
+				temp
+			}
+			Compression::None => read(filename)?,
+		};
+
+		Ok(Self {
+			data,
+			extractor,
+			skip_lines: opt.skip_lines.unwrap_or(0),
+		})
+	}
+
+	fn get_compression(filename: &PathBuf) -> (PathBuf, Compression) {
+		match filename.extension().and_then(OsStr::to_str) {
+			Some("br") => (filename.with_extension(""), Compression::Brotli),
+			Some("gz") => (filename.with_extension(""), Compression::Gzip),
+			_ => (filename.clone(), Compression::None),
+		}
+	}
+
+	fn get_extractor(filename: &PathBuf, opt: &GeoFileOptions) -> Result<BboxExtractor, Box<dyn Error>> {
+		match filename.extension().and_then(OsStr::to_str) {
+			Some("geojsonl") => Ok(Box::new(make_bbox::from_geojson)),
+			Some("geojson") => Ok(Box::new(make_bbox::from_geojson)),
+			Some("csv") => Ok(make_bbox::make_from_csv(
+				opt.separator.clone().unwrap_or(String::from(",")),
 				opt.col_x.unwrap_or(0),
 				opt.col_y.unwrap_or(1),
-			),
-			Some("tsv") => make_bbox::make_from_csv(
-				opt.separator.unwrap_or(String::from("\t")),
+			)),
+			Some("tsv") => Ok(make_bbox::make_from_csv(
+				opt.separator.clone().unwrap_or(String::from("\t")),
 				opt.col_x.unwrap_or(0),
 				opt.col_y.unwrap_or(1),
-			),
+			)),
 			_ => {
 				return Err(Box::new(std::io::Error::new(
 					std::io::ErrorKind::InvalidInput,
 					format!("Unsupported file extension: {}", filename.to_string_lossy()),
 				)))
 			}
-		};
-		let file = File::open(filename).unwrap();
-		let mmap = unsafe { Mmap::map(&file)? };
-
-		Ok(Self {
-			_file: file,
-			mmap,
-			extractor,
-			skip_lines: opt.skip_lines.unwrap_or(0),
-		})
+		}
 	}
 
 	pub fn read_range(&self, start: usize, length: usize) -> &[u8] {
-		&self.mmap[start..start + length]
+		&self.data[start..start + length]
 	}
 
 	pub fn get_entries(&mut self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
 		let mut entries: Vec<GeoNode> = Vec::new();
 		let mut line_no: usize = 0;
-		let file_size: f64 = self.mmap.len() as f64 / 100.;
+		let file_size: f64 = self.data.len() as f64 / 100.;
 		let start = Instant::now();
 		let mut current_pos: usize = 0;
 		let extractor = &self.extractor;
 
-		for i in 0..self.mmap.len() {
-			if self.mmap[i] == 10 {
+		for i in 0..self.data.len() {
+			if self.data[i] == 10 {
 				// new line break
 
 				line_no += 1;
@@ -80,7 +119,7 @@ impl GeoFile {
 				}
 
 				if line_no > self.skip_lines {
-					let line = from_utf8(&self.mmap[current_pos..i])?;
+					let line = from_utf8(&self.data[current_pos..i])?;
 					entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
 				}
 
