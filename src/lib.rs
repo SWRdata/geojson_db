@@ -5,13 +5,9 @@ use neon::{
 	context::Context,
 	prelude::{FunctionContext, ModuleContext, Object},
 	result::{JsResult, NeonResult},
-	types::{JsArray, JsBox, JsBuffer, JsNumber, JsObject, JsString},
+	types::{JsArray, JsBox, JsNumber, JsObject, JsString},
 };
-use std::{
-	cell::RefCell,
-	io::{BufWriter, Write},
-	path::PathBuf,
-};
+use std::{cell::RefCell, path::PathBuf, str::from_utf8};
 
 type BoxedGeoDB = JsBox<RefCell<GeoDB>>;
 
@@ -20,19 +16,20 @@ impl GeoDB {
 		let filename = PathBuf::from(cx.argument::<JsString>(0)?.value(&mut cx));
 		let options = cx.argument::<JsObject>(1).unwrap_or(cx.empty_object());
 
+		let get_usize = |name: &str, cx: &mut FunctionContext| -> Option<usize> {
+			options
+				.get_opt::<JsNumber, _, _>(cx, name)
+				.unwrap()
+				.map(|v| v.value(cx) as usize)
+		};
+
 		let opt = GeoFileOptions {
 			separator: options
 				.get_opt::<JsString, _, _>(&mut cx, "separator")?
 				.map(|v| v.value(&mut cx)),
-			col_x: options
-				.get_opt::<JsNumber, _, _>(&mut cx, "colX")?
-				.map(|v| v.value(&mut cx) as usize),
-			col_y: options
-				.get_opt::<JsNumber, _, _>(&mut cx, "colY")?
-				.map(|v| v.value(&mut cx) as usize),
-			skip_lines: options
-				.get_opt::<JsNumber, _, _>(&mut cx, "skipLine")?
-				.map(|v| v.value(&mut cx) as usize),
+			col_x: get_usize("colX", &mut cx),
+			col_y: get_usize("colY", &mut cx),
+			skip_lines: get_usize("skipLine", &mut cx),
 		};
 
 		match GeoDB::open(&filename, opt) {
@@ -57,20 +54,14 @@ impl GeoDB {
 		let (entries, next_index) = geo_db.query_bbox(&bbox, start_index, max_count).unwrap();
 		let array = cx.empty_array();
 
-		let mut buffer = BufWriter::new(vec![]);
-		buffer.write_all(b"[").unwrap();
 		for (i, entry) in entries.iter().enumerate() {
-			if i != 0 {
-				buffer.write_all(b",").unwrap();
-			}
-			buffer.write_all(entry).unwrap();
+			let line = cx.string(from_utf8(entry).unwrap());
+			array.set(&mut cx, i as u32, line)?;
 		}
-		buffer.write_all(b"]").unwrap();
-		let buffer = JsBuffer::external(&mut cx, buffer.into_inner().unwrap());
-		array.set(&mut cx, 0, buffer)?;
 
 		let next_index = cx.number(next_index as u32);
-		array.set(&mut cx, 1, next_index)?;
+		let n = array.len(&mut cx);
+		array.set(&mut cx, n, next_index)?;
 
 		Ok(array)
 	}

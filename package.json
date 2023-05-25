@@ -1,6 +1,6 @@
 {
   "name": "geojson_db",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "A high-performance npm package for rapid spatial queries on GeoJSON files",
   "main": "index.js",
   "scripts": {

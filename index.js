@@ -20,9 +20,8 @@ export default class Geofile {
 
 		do {
 			let result = geofileFind.call(this.#me, bbox, index, maxCount);
-			let entries = JSON.parse(result[0]);
-			index = result[1];
-			for (let entry of entries) yield entry;
+			index = result.pop();
+			for (let entry of result) yield entry;
 		} while (index > 0);
 	}
 }

@@ -2,7 +2,9 @@
 **/.DS_Store
 **/node_modules
 data/
-target/
+helpers/release.sh
 index.node
 npm-debug.log*
-helpers/release.sh
+target/
+testdata/*.dat
+testdata/*.idx
