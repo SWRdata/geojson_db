@@ -1,6 +1,6 @@
 use super::{file::GeoFileOptions, GeoBBox, GeoFile, GeoIndex, GeoTable};
 use neon::types::Finalize;
-use std::{error::Error, path::PathBuf, result::Result};
+use std::{error::Error, path::Path, result::Result};
 
 pub type IteratorResult<'a> = (Vec<&'a [u8]>, usize);
 
@@ -13,7 +13,7 @@ unsafe impl Send for GeoDB {}
 impl Finalize for GeoDB {}
 
 impl GeoDB {
-	pub fn open(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
+	pub fn open(filename: &Path, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
 		let stem = filename.file_name().unwrap().to_str().unwrap();
 		let filename_index = filename.with_file_name(format!("{}.idx", stem));
 		let filename_table = filename.with_file_name(format!("{}.dat", stem));
