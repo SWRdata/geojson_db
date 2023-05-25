@@ -6,7 +6,7 @@ use std::{
 	ffi::OsStr,
 	fs::{read, File},
 	io::Read,
-	path::PathBuf,
+	path::{Path, PathBuf},
 	result::Result,
 	str::from_utf8,
 	time::Instant,
@@ -59,15 +59,15 @@ impl GeoFile {
 		})
 	}
 
-	fn get_compression(filename: &PathBuf) -> (PathBuf, Compression) {
+	fn get_compression(filename: &Path) -> (PathBuf, Compression) {
 		match filename.extension().and_then(OsStr::to_str) {
 			Some("br") => (filename.with_extension(""), Compression::Brotli),
 			Some("gz") => (filename.with_extension(""), Compression::Gzip),
-			_ => (filename.clone(), Compression::None),
+			_ => (filename.to_path_buf(), Compression::None),
 		}
 	}
 
-	fn get_extractor(filename: &PathBuf, opt: &GeoFileOptions) -> Result<BboxExtractor, Box<dyn Error>> {
+	fn get_extractor(filename: &Path, opt: &GeoFileOptions) -> Result<BboxExtractor, Box<dyn Error>> {
 		match filename.extension().and_then(OsStr::to_str) {
 			Some("geojsonl") => Ok(Box::new(make_bbox::from_geojson)),
 			Some("geojson") => Ok(Box::new(make_bbox::from_geojson)),
@@ -81,12 +81,10 @@ impl GeoFile {
 				opt.col_x.unwrap_or(0),
 				opt.col_y.unwrap_or(1),
 			)),
-			_ => {
-				return Err(Box::new(std::io::Error::new(
-					std::io::ErrorKind::InvalidInput,
-					format!("Unsupported file extension: {}", filename.to_string_lossy()),
-				)))
-			}
+			_ => Err(Box::new(std::io::Error::new(
+				std::io::ErrorKind::InvalidInput,
+				format!("Unsupported file extension: {}", filename.to_string_lossy()),
+			))),
 		}
 	}
 
