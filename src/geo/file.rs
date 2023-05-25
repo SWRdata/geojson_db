@@ -28,13 +28,34 @@ pub struct GeoFileOptions {
 	pub skip_lines: Option<usize>,
 }
 
+impl GeoFileOptions {
+	#[allow(dead_code)]
+	pub fn new(separator: &str, col_x: usize, col_y: usize, skip_lines: usize) -> Self {
+		Self {
+			separator: Some(separator.to_owned()),
+			col_x: Some(col_x),
+			col_y: Some(col_y),
+			skip_lines: Some(skip_lines),
+		}
+	}
+	#[allow(dead_code)]
+	pub fn empty() -> Self {
+		Self {
+			separator: None,
+			col_x: None,
+			col_y: None,
+			skip_lines: None,
+		}
+	}
+}
+
 pub struct GeoFile {
 	data: Vec<u8>,
 	extractor: BboxExtractor,
 	skip_lines: usize,
 }
 impl GeoFile {
-	pub fn load(filename: &PathBuf, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
+	pub fn load(filename: &Path, opt: GeoFileOptions) -> Result<Self, Box<dyn Error>> {
 		let (basename, compression) = GeoFile::get_compression(filename);
 		let extractor: BboxExtractor = GeoFile::get_extractor(&basename, &opt)?;
 
@@ -203,12 +224,7 @@ mod tests {
 	// Testing GeoFileOptions struct
 	#[test]
 	fn geo_file_options() {
-		let options = GeoFileOptions {
-			separator: Some(String::from("a")),
-			col_x: Some(5),
-			col_y: Some(6),
-			skip_lines: Some(7),
-		};
+		let options = GeoFileOptions::new("a", 5, 6, 7);
 
 		assert_eq!(options.separator.unwrap(), "a");
 		assert_eq!(options.col_x.unwrap(), 5);
@@ -220,12 +236,7 @@ mod tests {
 	#[test]
 	fn geo_file_load_csv_gzip() -> Result<(), Box<dyn Error>> {
 		let filename = PathBuf::from("testdata/points.csv.gz");
-		let options = GeoFileOptions {
-			separator: Some(String::from(",")),
-			col_x: Some(0),
-			col_y: Some(1),
-			skip_lines: Some(0),
-		};
+		let options = GeoFileOptions::new(",", 0, 1, 0);
 		let geo_file = GeoFile::load(&filename, options)?;
 		let n = geo_file.data.len();
 
@@ -261,12 +272,7 @@ mod tests {
 	#[test]
 	fn geo_file_load_geojsonl_brotli() -> Result<(), Box<dyn Error>> {
 		let filename = PathBuf::from("testdata/polygons.geojsonl.br");
-		let options = GeoFileOptions {
-			separator: None,
-			col_x: None,
-			col_y: None,
-			skip_lines: None,
-		};
+		let options = GeoFileOptions::empty();
 		let geo_file = GeoFile::load(&filename, options)?;
 		let n = geo_file.data.len();
 

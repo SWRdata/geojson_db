@@ -4,7 +4,7 @@ use std::{
 	error::Error,
 	fs::{read, write, File},
 	io::{BufWriter, Seek, Write},
-	path::PathBuf,
+	path::Path,
 	result::Result,
 	time::Instant,
 };
@@ -14,9 +14,7 @@ pub struct GeoIndex {
 	nodes: Vec<GeoNode>,
 }
 impl GeoIndex {
-	pub fn create(
-		geo_data: &mut GeoFile, filename_index: &PathBuf, filename_table: &PathBuf,
-	) -> Result<Self, Box<dyn Error>> {
+	pub fn create(geo_data: &mut GeoFile, filename_index: &Path, filename_table: &Path) -> Result<Self, Box<dyn Error>> {
 		let mut entries = geo_data.get_entries()?;
 		let mut index = GeoIndex { nodes: Vec::new() };
 		index.create_tree(entries.as_mut_slice());
@@ -24,16 +22,16 @@ impl GeoIndex {
 		index.save(filename_index)?;
 		Ok(index)
 	}
-	pub fn load(filename_index: &PathBuf) -> Result<Self, Box<dyn Error>> {
+	pub fn load(filename_index: &Path) -> Result<Self, Box<dyn Error>> {
 		let bytes = read(filename_index)?;
 		let index = bincode::deserialize(&bytes)?;
 		Ok(index)
 	}
-	fn save(&self, filename_index: &PathBuf) -> Result<(), Box<dyn Error>> {
+	fn save(&self, filename_index: &Path) -> Result<(), Box<dyn Error>> {
 		write(filename_index, bincode::serialize(self)?)?;
 		Ok(())
 	}
-	fn rewrite_table(&mut self, geo_data: &mut GeoFile, filename_table: &PathBuf) -> Result<(), Box<dyn Error>> {
+	fn rewrite_table(&mut self, geo_data: &mut GeoFile, filename_table: &Path) -> Result<(), Box<dyn Error>> {
 		let mut file = BufWriter::new(File::create(filename_table)?);
 		let mut pos: usize = 0;
 		let start = Instant::now();
@@ -130,45 +128,56 @@ impl GeoIndex {
 
 #[cfg(test)]
 mod tests {
-	/*
 	use super::*;
-	use std::fs;
+	use crate::geo::GeoFileOptions;
+	use assert_fs::NamedTempFile;
 
 	#[test]
-	fn test_create_and_save_geo_index() {
-		let mut geofile = GeoFile::new(); // You'll need to add your own logic for creating a GeoFile instance.
-		let filename_index = PathBuf::from("test.index");
-		let filename_table = PathBuf::from("test.table");
-		let result = GeoIndex::create(&mut geofile, &filename_index, &filename_table);
+	fn test_create_and_load_geo_index() -> Result<(), Box<dyn Error>> {
+		let filename = Path::new("testdata/polygons.geojsonl.br");
+		let filename_index = NamedTempFile::new("temp.idx")?;
+		let filename_table = NamedTempFile::new("temp.dat")?;
 
-		assert!(result.is_ok());
-		assert!(filename_index.exists());
-		assert!(filename_table.exists());
+		let mut geo_data = GeoFile::load(&filename, GeoFileOptions::empty())?;
 
-		fs::remove_file(filename_index).unwrap();
-		fs::remove_file(filename_table).unwrap();
+		let geo_index1 = GeoIndex::create(&mut geo_data, filename_index.path(), filename_table.path())?;
+		let geo_index2 = GeoIndex::load(&filename_index)?;
+		let bbox = GeoBBox::new(10., 10.2, 51., 51.2);
+		let node1 = GeoNode {
+			is_leaf: true,
+			bbox: GeoBBox::new(10.1946335, 10.1953125, 51.10852, 51.10955),
+			value1: 1420116,
+			value2: 696,
+			next: 3914,
+		};
+		let node2 = GeoNode {
+			is_leaf: true,
+			bbox: GeoBBox::new(10.1953125, 10.195699, 51.10852, 51.109306),
+			value1: 1420812,
+			value2: 648,
+			next: 3915,
+		};
+
+		for geo_index in vec![geo_index1, geo_index2] {
+			assert_eq!(geo_index.nodes.len(), 7155);
+
+			let (leaves, index) = geo_index.query_bbox(&bbox, 0, 10);
+			assert_eq!(leaves, vec![&node1, &node2]);
+			assert_eq!(index, 0);
+
+			let (leaves, index) = geo_index.query_bbox(&bbox, 0, 1);
+			assert_eq!(leaves, vec![&node1]);
+			assert_eq!(index, 3914);
+
+			let (leaves, index) = geo_index.query_bbox(&bbox, 3914, 1);
+			assert_eq!(leaves, vec![&node2]);
+			assert_eq!(index, 3915);
+
+			let (leaves, index) = geo_index.query_bbox(&bbox, 3915, 1);
+			assert_eq!(leaves, Vec::<&GeoNode>::new());
+			assert_eq!(index, 0);
+		}
+
+		Ok(())
 	}
-
-	#[test]
-	fn test_load_geo_index() {
-		let filename_index = PathBuf::from("test.index");
-
-		// Assuming that there is a valid index file.
-		let result = GeoIndex::load(&filename_index);
-
-		assert!(result.is_ok());
-	}
-
-	#[test]
-	fn test_query_bbox() {
-		let filename_index = PathBuf::from("test.index");
-
-		let geo_index = GeoIndex::load(&filename_index).unwrap();
-		let bbox = GeoBBox::new(1.0, 2.0, 3.0, 4.0);
-
-		let (leaves, _) = geo_index.query_bbox(&bbox, 0, 100);
-
-		assert!(leaves.len() > 0); // Assuming there is at least one leaf in this bounding box.
-	}
-	 */
 }
