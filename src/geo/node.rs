@@ -2,7 +2,7 @@ use super::GeoBBox;
 use serde::{Deserialize, Serialize};
 
 /// The GeoNode struct represents a node in a tree structure that is used for spatial indexing.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct GeoNode {
 	/// The bounding box of the geographic area covered by this node.
 	pub bbox: GeoBBox,

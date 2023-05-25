@@ -94,7 +94,7 @@ impl GeoFile {
 		&self.data[start..start + length]
 	}
 
-	pub fn get_entries(&mut self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
+	pub fn get_entries(&self) -> Result<Vec<GeoNode>, Box<dyn Error>> {
 		let mut entries: Vec<GeoNode> = Vec::new();
 		let mut line_no: usize = 0;
 		let file_size: f64 = self.data.len() as f64 / 100.;
@@ -194,5 +194,109 @@ mod make_bbox {
 			let y: f32 = fields[col_y].parse().unwrap();
 			GeoBBox::new_point(x, y)
 		})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::path::PathBuf;
+
+	// Testing GeoFileOptions struct
+	#[test]
+	fn geo_file_options() {
+		let options = GeoFileOptions {
+			separator: Some(String::from("a")),
+			col_x: Some(5),
+			col_y: Some(6),
+			skip_lines: Some(7),
+		};
+
+		assert_eq!(options.separator.unwrap(), "a");
+		assert_eq!(options.col_x.unwrap(), 5);
+		assert_eq!(options.col_y.unwrap(), 6);
+		assert_eq!(options.skip_lines.unwrap(), 7);
+	}
+
+	// Testing loading a gzip compressed file
+	#[test]
+	fn geo_file_load_csv_gzip() -> Result<(), Box<dyn Error>> {
+		let filename = PathBuf::from("testdata/points.csv.gz");
+		let options = GeoFileOptions {
+			separator: Some(String::from(",")),
+			col_x: Some(0),
+			col_y: Some(1),
+			skip_lines: Some(0),
+		};
+		let geo_file = GeoFile::load(&filename, options)?;
+		let n = geo_file.data.len();
+
+		assert_eq!(n, 1719789);
+
+		assert_eq!(
+			from_utf8(&geo_file.data[0..54])?,
+			"11.39979,52.47553\n11.80435,53.68146\n11.80666,53.68135\n"
+		);
+
+		assert_eq!(
+			from_utf8(&geo_file.data[n - 50..n])?,
+			"\n9.82855,48.18889\n9.8237,48.18951\n9.8251,48.19072\n"
+		);
+
+		let entries = geo_file.get_entries()?;
+		assert_eq!(entries.len(), 100000);
+
+		assert_eq!(
+			entries[0],
+			GeoNode::new_leaf(GeoBBox::new_point(11.39979, 52.47553), 0, 17)
+		);
+
+		assert_eq!(
+			entries[entries.len() - 1],
+			GeoNode::new_leaf(GeoBBox::new_point(9.8251, 48.19072), 1719773, 15)
+		);
+
+		Ok(())
+	}
+
+	// Testing loading a brotli compressed file
+	#[test]
+	fn geo_file_load_geojsonl_brotli() -> Result<(), Box<dyn Error>> {
+		let filename = PathBuf::from("testdata/polygons.geojsonl.br");
+		let options = GeoFileOptions {
+			separator: None,
+			col_x: None,
+			col_y: None,
+			skip_lines: None,
+		};
+		let geo_file = GeoFile::load(&filename, options)?;
+		let n = geo_file.data.len();
+
+		assert_eq!(n, 2902443);
+
+		assert_eq!(
+			from_utf8(&geo_file.data[0..257])?,
+			"{\"type\":\"Feature\",\"properties\":{\"land\":\"BW\",\"klasse\":\"Historische Siedlung\",\"name\":\"Römische Niederlassung\",\"name_kurz\":\"Röm. Niederlass.\",\"layerName\":\"Besondere_Flaeche\"},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[8.70915412902832,47.936775561951805],"
+		);
+
+		assert_eq!(
+			from_utf8(&geo_file.data[n - 41..n])?,
+			",[13.348388671875,52.52004009949795]]]}}\n"
+		);
+
+		let entries = geo_file.get_entries()?;
+		assert_eq!(entries.len(), 3578);
+
+		assert_eq!(
+			entries[0],
+			GeoNode::new_leaf(GeoBBox::new(8.709154, 8.710508, 47.935436, 47.936913), 0, 566)
+		);
+
+		assert_eq!(
+			entries[entries.len() - 1],
+			GeoNode::new_leaf(GeoBBox::new(13.348389, 13.359375, 52.519386, 52.520912), 2901065, 1377)
+		);
+
+		Ok(())
 	}
 }
