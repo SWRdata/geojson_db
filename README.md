@@ -5,6 +5,7 @@ It currently supports `.geojsonl` (line-limited GeoJSON features), `.csv` and `.
 Due to the in-memory architecture, make sure you have enough memory to load the full uncompressed file.
 
 ## Example Usage
+
 ```javascript
 import Geofile from 'geojson_db';
 
@@ -15,6 +16,17 @@ for (let feature of file.find(bbox)) {
    feature = JSON.parse(feature);
    console.log(feature);
 }
+```
+
+You can also define options:
+
+```javascript
+let file = new Geofile('features.geojsonl.gz', {
+   separator: ';', // field seperator for CSV / TSV files - default: "," / "\t"
+   colX: 3, // column index of x values - default: 0
+   colY: 4, // column index of y values - default: 1
+   skipLines: 1,  // number of lines to skip, e.g. header line - default: 0
+});
 ```
 
 ## Installation 

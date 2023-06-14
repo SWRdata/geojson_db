@@ -29,7 +29,7 @@ impl GeoDB {
 				.map(|v| v.value(&mut cx)),
 			col_x: get_usize("colX", &mut cx),
 			col_y: get_usize("colY", &mut cx),
-			skip_lines: get_usize("skipLine", &mut cx),
+			skip_lines: get_usize("skipLines", &mut cx),
 		};
 
 		match GeoDB::open(&filename, opt) {
