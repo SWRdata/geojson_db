@@ -1,6 +1,6 @@
 [package]
 name = "geojson_db"
-version = "0.1.0"
+version = "0.3.2"
 authors = ["Michael Kreil <github@michael-kreil.de>"]
 homepage = "https://github.com/SWRdata/geojson_db"
 repository = "https://github.com/SWRdata/geojson_db.git"
@@ -19,7 +19,7 @@ brotli-decompressor = { version = "2.3.4", default-features = false, features = 
 geojson = { version = "0.24.1", default-features = false }
 libflate = { version = "1.4.0", default-features = false }
 neon = { version = "0.10.1", default-features = false, features = ["napi-6"] }
-serde = { version = "1.0.163", default-features = false, features = ["std"] }
+serde = { version = "1.0.164", default-features = false, features = ["std"] }
 
 [workspace]
 
