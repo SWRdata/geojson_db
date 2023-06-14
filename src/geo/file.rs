@@ -139,7 +139,9 @@ impl GeoFile {
 
 				if line_no > self.skip_lines {
 					let line = from_utf8(&self.data[current_pos..i])?;
-					entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
+					if line.len() > 1 {
+						entries.push(GeoNode::new_leaf(extractor(line), current_pos, i - current_pos));
+					}
 				}
 
 				current_pos = i + 1;

@@ -1,6 +1,6 @@
 [package]
 name = "geojson_db"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Michael Kreil <github@michael-kreil.de>"]
 homepage = "https://github.com/SWRdata/geojson_db"
 repository = "https://github.com/SWRdata/geojson_db.git"
