@@ -8,7 +8,8 @@
     "build-debug": "npm run build",
     "build-release": "npm run build -- --release",
     "install": "npm run build-release",
-    "test": "cargo test"
+    "test": "cargo test",
+    "upgrade": "cargo update; npm-check-updates -u && rm -f package-lock.json && rm -rf node_modules; npm i"
   },
   "author": {
     "name": "Michael Kreil",
@@ -46,5 +47,8 @@
     "Cargo.toml",
     "index.js",
     "src/**"
-  ]
+  ],
+  "devDependencies": {
+    "npm-check-updates": "^16.14.15"
+  }
 }
