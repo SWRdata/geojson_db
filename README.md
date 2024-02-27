@@ -18,10 +18,12 @@ for (let feature of file.find(bbox)) {
 }
 ```
 
+Notice, that the raw file is indexed and that the results are lines from this raw file as string. If it is a GeoJSONL file, you'll get JSON strings. For CSV or TSV you get single CSV/TSV lines as string.
+
 You can also define options:
 
 ```javascript
-let file = new Geofile('features.geojsonl.gz', {
+let file = new Geofile('features.csv.gz', {
    separator: ';', // field seperator for CSV / TSV files - default: "," / "\t"
    colX: 3, // column index of x values - default: 0
    colY: 4, // column index of y values - default: 1
@@ -53,35 +55,12 @@ This command uses the [cargo-cp-artifact](https://github.com/neon-bindings/cargo
 
 In the project directory, you can run:
 
-* `npm install` - Installs the project, including running `npm run build`.
-* `npm build` - Builds the Node addon (`index.node`) from source.
+* `npm run install` - Installs the project, including running `npm run build`.
+* `npm run build` - Builds the Node addon (`index.node`) from source.
 
-### Cargo build arguments
-
-You can pass additional [`cargo build`](https://doc.rust-lang.org/cargo/commands/cargo-build.html) arguments to `npm build` and `npm build-*` commands. For example, to enable a [cargo feature](https://doc.rust-lang.org/cargo/reference/features.html):
-
-```sh
-npm run build -- --feature=beetle
-```
-
-* `npm build-debug` - Alias for `npm build`.
-* `npm build-release` - Equivalent to `npm build` but builds the module with the [`release`](https://doc.rust-lang.org/cargo/reference/profiles.html#release) profile. Although release builds compile slower, they run faster.
-* `npm test` - Executes the unit tests using `cargo test`. To learn more about [adding tests to your Rust code](https://doc.rust-lang.org/book/ch11-01-writing-tests.html), refer to the [Rust book](https://doc.rust-lang.org/book/).
-
-## Project Structure
-
-The project directory is structured as follows:
-
-```
-geojson_db/
-├── Cargo.toml
-├── README.md
-├── index.node
-├── package.json
-├── src/
-|   └── lib.rs
-└── target/
-```
+* `npm run build-debug` - Alias for `npm run build`.
+* `npm run build-release` - Equivalent to `npm run build` but builds the Rust Code with [`release`](https://doc.rust-lang.org/cargo/reference/profiles.html#release) profile. Although release builds compile slower, the resulting binaries run faster.
+* `npm run test` - Executes the unit tests using `cargo test`. To learn more about [adding tests to your Rust code](https://doc.rust-lang.org/book/ch11-01-writing-tests.html), refer to the [Rust book](https://doc.rust-lang.org/book/).
 
 ## Documentation and Additional Learning Resources
 
